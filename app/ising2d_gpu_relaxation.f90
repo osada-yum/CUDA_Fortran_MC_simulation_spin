@@ -21,6 +21,10 @@ program ising2d_gpu_relaxation
         tot_energy(i) = tot_energy(i) + ising2d%calc_energy_sum()
      end do
   end do
+  write(output_unit, '(a, i0)') "# size: ", ising2d%nall()
+  write(output_unit, '(a, i0)') "# sample: ", tot_sample
+  write(output_unit, '(a, i0)') "# mcs: ", mcs
+  write(output_unit, '(a, g0)') "# kbt: ", kbt
   do i = 1, mcs
      write(output_unit, '(*(g0, 1x))') i, &
           & real(tot_magne(i), real64) / (ising2d%nall() * tot_sample), &
