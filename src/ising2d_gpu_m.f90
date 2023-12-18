@@ -7,7 +7,7 @@ module ising2d_gpu_m
   private
   integer(int32), public, protected :: ising2d_gpu_stat
   integer(int64), parameter :: NUM_THREADS = 512
-  integer(int32), parameter :: lb_exparr = -4, ub_exparr = 4
+  integer(int32), parameter :: lb_exparr = -8, ub_exparr = 8
   public :: ising2d_gpu
   type :: ising2d_gpu
      private
