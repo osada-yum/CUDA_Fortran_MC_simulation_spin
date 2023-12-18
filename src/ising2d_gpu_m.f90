@@ -35,6 +35,7 @@ module ising2d_gpu_m
      procedure, pass :: nall => nall_ising2d_gpu
      procedure, pass :: kbt => kbt_ising2d_gpu
      procedure, pass :: beta => beta_ising2d_gpu
+     procedure, pass :: spins => spins_ising2d_gpu
      !> calculator.
      procedure, pass :: calc_energy_sum => calc_energy_sum_ising2d_gpu
      procedure, pass :: calc_magne_sum => calc_magne_sum_ising2d_gpu
@@ -173,6 +174,11 @@ contains
     class(ising2d_gpu), intent(in) :: this
     res = this%beta_
   end function beta_ising2d_gpu
+  pure function spins_ising2d_gpu(this) result(res)
+    class(ising2d_gpu), intent(in) :: this
+    integer(int32), allocatable :: res(:)
+    allocate(res, source = this%spins_)
+  end function spins_ising2d_gpu
 
   !> calc_delta_energy: Calculate delta energy if spins_(idx) is flipped.
   attributes(device) pure integer(int32) function calc_delta_energy(lb, ub, nx, spins, idx) result(res)
