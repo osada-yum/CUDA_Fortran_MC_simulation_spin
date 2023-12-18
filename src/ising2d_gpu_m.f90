@@ -66,7 +66,7 @@ contains
   impure subroutine set_random_spin_ising2d_gpu(this)
     class(ising2d_gpu), intent(inout) :: this
     ising2d_gpu_stat = curandGenerate(this%rand_gen_, this%randoms_, this%nall_)
-    call set_random_spin_sub<<<(this%nall_ + NUM_THREADS - 1)/NUM_THREADS, NUM_THREADS>>>(this%nall_, this%spins_(1:this%nall_), this%randoms_)
+    call set_random_spin_sub<<<(this%nall_ + NUM_THREADS - 1)/NUM_THREADS, NUM_THREADS>>>(this%nall_, this%spins_(1:this%nall_), this%randoms_(1:this%nall_))
     call this%update_norishiro()
   end subroutine set_random_spin_ising2d_gpu
   attributes(global) pure subroutine set_random_spin_sub(n, spins, randoms)
@@ -133,10 +133,10 @@ contains
     ub = ubound(this%spins_, dim = 1, kind = int64)
     ising2d_gpu_stat = curandGenerate(this%rand_gen_, this%randoms_(1:this%nall_), this%nall_)
     call update_sub <<<(this%nall_ + NUM_THREADS - 1) / NUM_THREADS, NUM_THREADS>>> &
-         & (lb, ub, this%nx_, this%nall_, this%spins_, this%randoms_, this%exparr_, 1)
+         & (lb, ub, this%nx_, this%nall_, this%spins_, this%randoms_(1:this%nall_), this%exparr_, 1)
     call this%update_norishiro()
     call update_sub <<<(this%nall_ + NUM_THREADS - 1) / NUM_THREADS, NUM_THREADS>>> &
-         & (lb, ub, this%nx_, this%nall_, this%spins_, this%randoms_, this%exparr_, 2)
+         & (lb, ub, this%nx_, this%nall_, this%spins_, this%randoms_(1:this%nall_), this%exparr_, 2)
     call this%update_norishiro()
   end subroutine update_ising2d_gpu
   attributes(global) pure subroutine update_sub(lb, ub, nx, nall, spins, randoms, exparr, offset)
@@ -150,8 +150,9 @@ contains
     if (idx > nall) return
     !> do idx = offset, this%nall_, 2
     delta_energy = calc_delta_energy(lb, ub, nx, spins, idx)
-    if (randoms(idx) < exparr(delta_energy)) &
-         & spins(idx) = - spins(idx)
+    if (randoms(idx) >= exparr(delta_energy)) return
+    !> randoms(idx) < exparr(delta_energy)
+    spins(idx) = - spins(idx)
   end subroutine update_sub
 
   pure integer(int64) function nx_ising2d_gpu(this) result(res)
