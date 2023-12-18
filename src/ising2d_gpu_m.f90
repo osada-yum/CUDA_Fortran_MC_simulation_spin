@@ -76,8 +76,8 @@ contains
     integer(int64) :: idx
     idx = (blockIdx%x - 1) * blockDim%x + threadIdx%x
     if (idx > n) return !> over norishiro.
-    !> 1 <= idx <= this%nall__
-    spins(idx) = int(2 * randoms(idx) - 1, int32)
+    !> 1 <= idx <= this%nall_.
+    spins(idx) = merge(1, -1, randoms(idx) < 0.5_real64)
   end subroutine set_random_spin_sub
   !> update_norishiro_ising2d_gpu: Update norishiro by GPU.
   pure subroutine update_norishiro_ising2d_gpu(this)
