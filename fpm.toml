@@ -1,9 +1,9 @@
 name = "GPU_simulation"
 version = "0.1.0"
 license = "license"
-author = "MrTired"
-maintainer = "yu-ma31@i.softbank.jp"
-copyright = "Copyright 2023, MrTired"
+author = "osada-yum"
+maintainer = "osada.yum@gmail.com"
+copyright = "Copyright 2023, osada-yum"
 [build]
 auto-executables = true
 auto-tests = true
