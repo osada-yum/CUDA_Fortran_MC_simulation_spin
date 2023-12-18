@@ -36,8 +36,8 @@ module ising2d_gpu_m
      procedure, pass :: kbt => kbt_ising2d_gpu
      procedure, pass :: beta => beta_ising2d_gpu
      !> calculator.
-     procedure, pass, private :: calc_energy_sum => calc_energy_sum_ising2d_gpu
-     procedure, pass, private :: calc_magne_sum => calc_magne_sum_ising2d_gpu
+     procedure, pass :: calc_energy_sum => calc_energy_sum_ising2d_gpu
+     procedure, pass :: calc_magne_sum => calc_magne_sum_ising2d_gpu
   end type ising2d_gpu
 contains
   impure subroutine init_ising2d_gpu(this, nx, ny, kbt)
