@@ -14,5 +14,5 @@ sed -i -e "s/nx = .*/nx = ${nx}_int64/" \
     -e "s/kbt = .*/kbt = ${kbt}_real64/" \
     "${progfile}"
 
-fpm --verbose --compiler='nvfortran' --flag="${FCFLAGS}" build
-fpm --verbose --compiler='nvfortran' --flag="${FCFLAGS}" run | tee ${outputfile}
+fpm --verbose --compiler='nvfortran' --flag="${FCFLAGS}" build ising2d_gpu_relaxation
+fpm --verbose --compiler='nvfortran' --flag="${FCFLAGS}" run ising2d_gpu_relaxation | tee ${outputfile}

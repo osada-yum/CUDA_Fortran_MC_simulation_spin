@@ -10,6 +10,8 @@ auto-tests = true
 auto-examples = true
 module-naming = false
 external-modules = ["cudafor", "curand"]
+[dependencies]
+numeric_simulation = { git = "https://github.com/osada-yum/Numerical_utilities.git" }
 [install]
 library = false
 [fortran]
@@ -17,3 +19,7 @@ implicit-typing = false
 implicit-external = false
 source-form = "free"
 
+[[executable]]
+name = "ising2d_gpu_relaxation"
+source-dir = "app"
+main = "ising2d_gpu_relaxation.f90"
