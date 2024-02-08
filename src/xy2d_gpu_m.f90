@@ -180,15 +180,14 @@ contains
     integer(int64), value :: idx
     res = calc_local_energy(candidate, spins(idx - 1), spins(idx + 1), spins(idx + nx), spins(idx - nx)) &
          & - calc_local_energy(spins(idx), spins(idx - 1), spins(idx + 1), spins(idx + nx), spins(idx - nx))
-  contains
-    pure real(real64) function calc_local_energy(center, left, right, up, down) result(res)
-      real(real64), intent(in) :: center, left, right, up, down
-      res = - (cos(center - left) + &
-           &   cos(center - right) + &
-           &   cos(center - up) + &
-           &   cos(center - down))
-    end function calc_local_energy
   end function calc_delta_energy
+  attributes(device) pure real(real64) function calc_local_energy(center, left, right, up, down) result(res)
+    real(real64), value :: center, left, right, up, down
+    res = - (cos(center - left) + &
+         &   cos(center - right) + &
+         &   cos(center - up) + &
+         &   cos(center - down))
+  end function calc_local_energy
   !> calc_energy_sum_xy2d_gpu: Calculate summation of energy.
   pure real(real64) function calc_energy_sum_xy2d_gpu(this) result(res)
     class(xy2d_gpu), intent(in) :: this
