@@ -9,8 +9,8 @@ program xy2d_gpu_relaxation
   integer(int64), parameter :: ny = 1000_int64
   real(real64), parameter :: n_inv_r64 = 1 / real(nx * ny, real64)
   real(real64), parameter :: kbt = 1.0_real64
-  type(ising2d_gpu) :: xy2d
-  integer(int64) :: m, e
+  type(xy2d_gpu) :: xy2d
+  real(real64) :: m, e
   type(variance_covariance_kahan) :: order_parameter(mcs)
   integer(int32) :: i, sample
   call xy2d%init(nx, ny, kbt)
@@ -39,4 +39,4 @@ program xy2d_gpu_relaxation
           & order_parameter(i)%var1(), order_parameter(i)%var2(), &
           & order_parameter(i)%cov()
   end do
-end program ising2d_gpu_relaxation
+end program xy2d_gpu_relaxation
