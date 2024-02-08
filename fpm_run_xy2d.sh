@@ -6,7 +6,7 @@ ny=$((nx - 1))
 mcs=1000
 sample=1440000
 kbt=1.0
-outputfile="data/2D-XY_GPU_x${nx}_y${ny}_mcs${mcs}_sample${sample}_kbt${kbt}_$(date +%Y%m%d_%H%M%S).dat"
+outputfile="data/XY/2D-XY_GPU_x${nx}_y${ny}_mcs${mcs}_sample${sample}_kbt${kbt}_$(date +%Y%m%d_%H%M%S).dat"
 sed -i -e "s/nx = .*/nx = ${nx}_int64/" \
     -e "s/ny = .*/ny = ${ny}_int64/" \
     -e "s/mcs = .*/mcs = ${mcs}_int32/" \
