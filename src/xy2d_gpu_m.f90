@@ -9,7 +9,6 @@ module xy2d_gpu_m
   real(real64), parameter :: pi = 4 * atan(1.0_real64)
   integer(int32), public, protected :: xy2d_gpu_stat
   integer(int64), parameter :: NUM_THREADS = 512
-  integer(int32), parameter :: lb_exparr = -8, ub_exparr = 8
   public :: xy2d_gpu
   type :: xy2d_gpu
      private
@@ -135,7 +134,7 @@ contains
     real(real64), intent(in) :: randoms(nall), candidates(nall)
     integer(int32), value :: offset
     real(real64) :: candidate
-    integer(int32) :: delta_energy
+    real(real64) :: delta_energy
     integer(int64) :: idx
     idx = 2 * ((blockIdx%x - 1) * blockDim%x + threadIdx%x) - 2 + offset
     if (idx > nall) return
