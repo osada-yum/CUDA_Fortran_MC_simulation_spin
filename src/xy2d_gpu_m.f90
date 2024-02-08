@@ -193,22 +193,25 @@ contains
   pure real(real64) function calc_energy_sum_xy2d_gpu(this) result(res)
     class(xy2d_gpu), intent(in) :: this
     type(kahan_summation) :: ksum
+    real(real64), allocatable :: spins(:)
     integer(int64) :: i
     ksum = kahan_summation(0)
-    !$acc parallel loop reduction(+:ksum)
+    allocate(spins, source = this%spins_)
     do i = 1, this%nall_
-       ksum = ksum - this%spins_(i) * (this%spins_(i + 1) + this%spins_(i + this%nx_))
+       ksum = ksum + (- cos(spins(i) - spins(i + 1)) + cos(spins(i) - spins(i + this%nx_)))
     end do
-    res = k%val()
+    res = ksum%val()
   end function calc_energy_sum_xy2d_gpu
   !> calc_magne_sum_xy2d_gpu: Calculate summation of energy.
-  pure integer(int64) function calc_magne_sum_xy2d_gpu(this) result(res)
+  pure real(real64) function calc_magne_sum_xy2d_gpu(this) result(res)
     class(xy2d_gpu), intent(in) :: this
     type(kahan_summation) :: ksum
+    real(real64), allocatable :: spins(:)
     integer(int64) :: i
     ksum = kahan_summation(0)
+    allocate(spins, source = this%spins_)
     do i = 1, this%nall_
-       ksum = ksum + this%spins_(i)
+       ksum = ksum + cos(spins(i))
     end do
     res = ksum%val()
   end function calc_magne_sum_xy2d_gpu
