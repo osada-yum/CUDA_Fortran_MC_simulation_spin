@@ -52,7 +52,7 @@ contains
     this%nall_ = nx * ny
     this%norishiro_begin_ = 1 - nx
     this%norishiro_end_ = this%nall_ + nx
-    allocate(this%spins_(1:2, this%norishiro_begin_:this%norishiro_end_))
+    allocate(this%spins_(this%norishiro_begin_:this%norishiro_end_, 1:2))
     allocate(this%randoms_(1:this%nall_))
     allocate(this%candidates_(1:this%nall_))
     xy2d_gpu_stat = curandCreateGenerator(this%rand_gen_, CURAND_RNG_PSEUDO_XORWOW)
@@ -64,56 +64,56 @@ contains
     class(xy2d_gpu), intent(inout) :: this
     integer(int64) :: lb, ub
     integer(int64) :: i
-    lb = lbound(this%spins_, dim = 2, kind = int64)
-    ub = ubound(this%spins_, dim = 2, kind = int64)
-    call set_allup_spin_sub<<<(this%nall_ + NUM_THREADS - 1)/NUM_THREADS, NUM_THREADS>>>(ub - lb + 1, this%spins_(:, 1:this%nall_))
+    lb = lbound(this%spins_, dim = 1, kind = int64)
+    ub = ubound(this%spins_, dim = 1, kind = int64)
+    call set_allup_spin_sub<<<(this%nall_ + NUM_THREADS - 1)/NUM_THREADS, NUM_THREADS>>>(ub - lb + 1, this%spins_(:, :))
   end subroutine set_allup_spin_xy2d_gpu
   attributes(global) pure subroutine set_allup_spin_sub(n, spins)
     integer(int64), value :: n
-    real(real64), intent(inout) :: spins(1:2, n)
+    real(real64), intent(inout) :: spins(n, 1:2)
     integer(int64) :: idx
     idx = (blockIdx%x - 1) * blockDim%x + threadIdx%x
     if (idx > n) return !> out of lattice.
     !> lb <= idx <= ub.
-    spins(:, idx) = [1.0_real64, 0.0_real64] ! 全てX軸方向.
+    spins(idx, :) = [1.0_real64, 0.0_real64] ! 全てX軸方向.
   end subroutine set_allup_spin_sub
   !> set_random_spin_xy2d_gpu: Set 'paramagnetic' initial state of XY.
   impure subroutine set_random_spin_xy2d_gpu(this)
     class(xy2d_gpu), intent(inout) :: this
     xy2d_gpu_stat = curandGenerate(this%rand_gen_, this%randoms_, this%nall_)
-    call set_random_spin_sub<<<(this%nall_ + NUM_THREADS - 1)/NUM_THREADS, NUM_THREADS>>>(this%nall_, this%spins_(:, 1:this%nall_), this%randoms_(1:this%nall_))
+    call set_random_spin_sub<<<(this%nall_ + NUM_THREADS - 1)/NUM_THREADS, NUM_THREADS>>>(this%nall_, this%spins_(1:this%nall_, :), this%randoms_(1:this%nall_))
     call this%update_norishiro()
   end subroutine set_random_spin_xy2d_gpu
   attributes(global) pure subroutine set_random_spin_sub(n, spins, randoms)
     integer(int64), value :: n
-    real(real64), intent(inout) :: spins(1:2, n)
+    real(real64), intent(inout) :: spins(n, 1:2)
     real(real64), intent(in) :: randoms(n)
     integer(int64) :: idx
     idx = (blockIdx%x - 1) * blockDim%x + threadIdx%x
     if (idx > n) return !> over norishiro.
     !> 1 <= idx <= this%nall_.
-    spins(:, idx) = [cos(2 * pi * randoms(idx)), sin(2 * pi * randoms(idx))]
+    spins(idx, :) = [cos(2 * pi * randoms(idx)), sin(2 * pi * randoms(idx))]
   end subroutine set_random_spin_sub
   !> update_norishiro_xy2d_gpu: Update norishiro by GPU.
   pure subroutine update_norishiro_xy2d_gpu(this)
     class(xy2d_gpu), intent(inout) :: this
     integer(int64) :: lb, ub
-    lb = lbound(this%spins_, dim = 2, kind = int64)
-    ub = ubound(this%spins_, dim = 2, kind = int64)
+    lb = lbound(this%spins_, dim = 1, kind = int64)
+    ub = ubound(this%spins_, dim = 1, kind = int64)
     call update_norishiro_sub <<<(this%nx_ + this%nx_ - 1)/this%nx_, this%nx_>>> &
          & (lb, ub, this%nx_, this%nall_, this%spins_)
   end subroutine update_norishiro_xy2d_gpu
   attributes(global) pure subroutine update_norishiro_sub(lb, ub, nx, nall, spins)
     integer(int64), value :: lb, ub, nx, nall
-    real(real64), intent(inout) :: spins(1:2, lb:ub)
+    real(real64), intent(inout) :: spins(lb:ub, 1:2)
     integer(int64) :: idx
     idx = (blockIdx%x - 1) * blockDim%x + threadIdx%x
     if (idx > nx) return !> over norishiro.
     !> 1 <= idx <= this%nx_
     ! norishiro top, [nall+1:nall+nx] <- [1:nx]
-    spins(:, nall + idx) = spins(:, idx)
+    spins(nall + idx, :) = spins(idx, :)
     ! norishiro bottom, [-nx:0] <- [nall-nx+1:nall]
-    spins(:, idx - nx) = spins(:, nall - nx + idx)
+    spins(idx - nx, :) = spins(nall - nx + idx, :)
   end subroutine update_norishiro_sub
   !> set_kbt_xy2d_gpu: Set new kbt.
   pure subroutine set_kbt_xy2d_gpu(this, kbt)
@@ -131,8 +131,8 @@ contains
   impure subroutine update_xy2d_gpu(this)
     class(xy2d_gpu), intent(inout) :: this
     integer(int64) :: lb, ub
-    lb = lbound(this%spins_, dim = 2, kind = int64)
-    ub = ubound(this%spins_, dim = 2, kind = int64)
+    lb = lbound(this%spins_, dim = 1, kind = int64)
+    ub = ubound(this%spins_, dim = 1, kind = int64)
     xy2d_gpu_stat = curandGenerate(this%rand_gen_, this%randoms_(1:this%nall_), this%nall_)
     xy2d_gpu_stat = curandGenerate(this%rand_gen_, this%candidates_(1:this%nall_), this%nall_)
     call update_sub <<<(this%nall_ + NUM_THREADS - 1) / NUM_THREADS, NUM_THREADS>>> &
@@ -144,7 +144,7 @@ contains
   end subroutine update_xy2d_gpu
   attributes(global) pure subroutine update_sub(lb, ub, nx, nall, spins, beta, randoms, candidates, offset)
     integer(int64), value :: lb, ub, nx, nall
-    real(real64), intent(inout) :: spins(1:2, lb:ub)
+    real(real64), intent(inout) :: spins(lb:ub, 1:2)
     real(real64), value :: beta
     real(real64), intent(in) :: randoms(nall), candidates(nall)
     integer(int32), value :: offset
@@ -158,7 +158,7 @@ contains
     delta_energy = calc_delta_energy(lb, ub, nx, spins, idx, candidate)
     if (randoms(idx) >= exp(- beta * delta_energy)) return
     !> randoms(idx) < exp(- beta * delta_energy)
-    spins(:, idx) = candidate(:)
+    spins(idx, :) = candidate(:)
   end subroutine update_sub
 
   pure integer(int64) function nx_xy2d_gpu(this) result(res)
@@ -190,11 +190,11 @@ contains
   !> calc_delta_energy: Calculate delta energy if spins_(idx) is flipped.
   attributes(device) pure real(real64) function calc_delta_energy(lb, ub, nx, spins, idx, candidate) result(res)
     integer(int64), value :: lb, ub, nx
-    real(real64), intent(in) :: spins(1:2, lb:ub), candidate(1:2)
+    real(real64), intent(in) :: spins(lb:ub, 1:2), candidate(1:2)
     real(real64) :: center_diff(1:2), neighbor_summ(1:2)
     integer(int64), value :: idx
-    center_diff = candidate(:) - spins(:, idx)
-    neighbor_summ = spins(:, idx - 1) + spins(:, idx + 1) + spins(:, idx + nx) + spins(:, idx - nx)
+    center_diff = candidate(:) - spins(idx, :)
+    neighbor_summ = spins(idx - 1, :) + spins(idx + 1, :) + spins(idx + nx, :) + spins(idx - nx, :)
     res = - (center_diff(1) * neighbor_summ(1) + center_diff(2) * neighbor_summ(2))
   end function calc_delta_energy
   !> calc_energy_sum_xy2d_gpu: Calculate summation of energy.
@@ -206,7 +206,7 @@ contains
     ksum = kahan_summation(0)
     allocate(spins, source = this%spins_)
     do i = 1, this%nall_
-       ksum = ksum + sum(- spins(:, i) * (spins(:, i + 1) + spins(:, i + this%nx_)))
+       ksum = ksum + sum(- spins(i, :) * (spins(i + 1, :) + spins(i + this%nx_, :)))
     end do
     res = ksum%val()
   end function calc_energy_sum_xy2d_gpu
@@ -219,7 +219,7 @@ contains
     ksum = kahan_summation(0)
     allocate(spins, source = this%spins_)
     do i = 1, this%nall_
-       ksum = ksum + spins(1, i)
+       ksum = ksum + spins(i, 1)
     end do
     res = ksum%val()
   end function calc_magne_sum_xy2d_gpu
