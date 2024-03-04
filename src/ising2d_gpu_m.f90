@@ -67,6 +67,7 @@ contains
     class(ising2d_gpu), intent(inout) :: this
     ising2d_gpu_stat = curandGenerate(this%rand_gen_, this%randoms_, this%nall_)
     call set_random_spin_sub<<<(this%nall_ + NUM_THREADS - 1)/NUM_THREADS, NUM_THREADS>>>(this%nall_, this%spins_(1:this%nall_), this%randoms_(1:this%nall_))
+    ising2d_gpu_stat = cudaDeviceSynchronize()
     call this%update_norishiro()
   end subroutine set_random_spin_ising2d_gpu
   attributes(global) pure subroutine set_random_spin_sub(n, spins, randoms)
@@ -85,8 +86,9 @@ contains
     integer(int64) :: lb, ub
     lb = lbound(this%spins_, dim = 1, kind = int64)
     ub = ubound(this%spins_, dim = 1, kind = int64)
-    call update_norishiro_sub <<<(this%nx_ + this%nx_ - 1)/this%nx_, this%nx_>>> &
+    call update_norishiro_sub <<<(this%nx_ + NUM_THREADS - 1)/NUM_THREADS, NUM_THREADS>>> &
          & (lb, ub, this%nx_, this%nall_, this%spins_)
+    ising2d_gpu_stat = cudaDeviceSynchronize()
   end subroutine update_norishiro_ising2d_gpu
   attributes(global) pure subroutine update_norishiro_sub(lb, ub, nx, nall, spins)
     integer(int64), value :: lb, ub, nx, nall
@@ -134,9 +136,11 @@ contains
     ising2d_gpu_stat = curandGenerate(this%rand_gen_, this%randoms_(1:this%nall_), this%nall_)
     call update_sub <<<(this%nall_ + NUM_THREADS - 1) / NUM_THREADS, NUM_THREADS>>> &
          & (lb, ub, this%nx_, this%nall_, this%spins_, this%randoms_(1:this%nall_), this%exparr_, 1)
+    ising2d_gpu_stat = cudaDeviceSynchronize()
     call this%update_norishiro()
     call update_sub <<<(this%nall_ + NUM_THREADS - 1) / NUM_THREADS, NUM_THREADS>>> &
          & (lb, ub, this%nx_, this%nall_, this%spins_, this%randoms_(1:this%nall_), this%exparr_, 2)
+    ising2d_gpu_stat = cudaDeviceSynchronize()
     call this%update_norishiro()
   end subroutine update_ising2d_gpu
   attributes(global) pure subroutine update_sub(lb, ub, nx, nall, spins, randoms, exparr, offset)
@@ -191,21 +195,33 @@ contains
   !> calc_energy_sum_ising2d_gpu: Calculate summation of energy.
   pure integer(int64) function calc_energy_sum_ising2d_gpu(this) result(res)
     class(ising2d_gpu), intent(in) :: this
-    integer(int64) :: i
-    res = 0_int64
-    !$acc parallel loop reduction(+:res)
-    do i = 1, this%nall_
-       res = res - int(this%spins_(i) * (this%spins_(i + 1) + this%spins_(i + this%nx_)), int64)
-    end do
+    res = calc_energy_sum_sub(this%nall_, this%norishiro_end_, this%spins_(1:this%norishiro_end_))
+  contains
+    pure integer(int64) function calc_energy_sum_sub(n, norishiro_end, spins) result(res)
+      integer(int64), intent(in) :: n, norishiro_end
+      integer(int32), intent(in), device :: spins(norishiro_end)
+      integer(int64) :: i
+      res = 0_int64
+      !$acc parallel loop present(spins) reduction(+:res)
+      do i = 1, n
+         res = res - int(this%spins_(i) * (this%spins_(i + 1) + this%spins_(i + this%nx_)), int64)
+      end do
+    end function calc_energy_sum_sub
   end function calc_energy_sum_ising2d_gpu
   !> calc_magne_sum_ising2d_gpu: Calculate summation of energy.
   pure integer(int64) function calc_magne_sum_ising2d_gpu(this) result(res)
     class(ising2d_gpu), intent(in) :: this
-    integer(int64) :: i
-    res = 0_int64
-    !$acc parallel loop reduction(+:res)
-    do i = 1, this%nall_
-       res = res + int(this%spins_(i), int64)
-    end do
+    res = calc_magne_sum_sub(this%nall_, this%spins_(1:this%nall_))
+  contains
+    pure integer(int64) function calc_magne_sum_sub(n, spins) result(res)
+      integer(int64), intent(in) :: n
+      integer(int32), intent(in), device :: spins(n)
+      integer(int64) :: i
+      res = 0_int64
+      !$acc parallel loop present(spins) reduction(+:res)
+      do i = 1, n
+         res = res + spins(i)
+      end do
+    end function calc_magne_sum_sub
   end function calc_magne_sum_ising2d_gpu
 end module ising2d_GPU_m
