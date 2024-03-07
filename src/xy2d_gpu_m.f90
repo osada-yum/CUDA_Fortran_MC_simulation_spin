@@ -99,7 +99,7 @@ contains
     integer(int64) :: lb, ub
     lb = lbound(this%spins_, dim = 1, kind = int64)
     ub = ubound(this%spins_, dim = 1, kind = int64)
-    call update_norishiro_sub <<<(this%nx_ + this%nx_ - 1)/this%nx_, this%nx_>>> &
+    call update_norishiro_sub <<<(this%nx_ + NUM_THREADS - 1)/NUM_THREADS, NUM_THREADS>>> &
          & (lb, ub, this%nx_, this%nall_, this%spins_)
     xy2d_gpu_stat = cudaDeviceSynchronize()
   end subroutine update_norishiro_xy2d_gpu
