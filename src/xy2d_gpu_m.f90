@@ -3,7 +3,6 @@ module xy2d_gpu_m
   use, intrinsic :: iso_fortran_env
   use cudafor
   use curand
-  use xy_spin_m
   use kahan_summation_m
   implicit none
   private
