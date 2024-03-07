@@ -93,7 +93,7 @@ contains
     spins(idx, :) = [cos(2 * pi * randoms(idx)), sin(2 * pi * randoms(idx))]
   end subroutine set_random_spin_sub
   !> update_norishiro_xy2d_gpu: Update norishiro by GPU.
-  pure subroutine update_norishiro_xy2d_gpu(this)
+  impure subroutine update_norishiro_xy2d_gpu(this)
     class(xy2d_gpu), intent(inout) :: this
     integer(int64) :: lb, ub
     lb = lbound(this%spins_, dim = 1, kind = int64)

@@ -81,7 +81,7 @@ contains
     spins(idx) = merge(1, -1, randoms(idx) < 0.5_real64)
   end subroutine set_random_spin_sub
   !> update_norishiro_ising2d_gpu: Update norishiro by GPU.
-  pure subroutine update_norishiro_ising2d_gpu(this)
+  impure subroutine update_norishiro_ising2d_gpu(this)
     class(ising2d_gpu), intent(inout) :: this
     integer(int64) :: lb, ub
     lb = lbound(this%spins_, dim = 1, kind = int64)
