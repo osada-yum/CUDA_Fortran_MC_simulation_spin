@@ -80,7 +80,7 @@ contains
   impure subroutine set_random_spin_xy2d_gpu(this)
     class(xy2d_gpu), intent(inout) :: this
     xy2d_gpu_stat = curandGenerate(this%rand_gen_, this%randoms_, this%nall_)
-    call set_random_spin_sub<<<(this%nall_ + NUM_THREADS - 1)/NUM_THREADS, NUM_THREADS>>>(this%nall_, this%spins_(1:this%nall_, :), this%randoms_(1:this%nall_))
+    call set_random_spin_sub <<<(this%nall_ + NUM_THREADS - 1)/NUM_THREADS, NUM_THREADS>>>(this%nall_, this%spins_(1:this%nall_, :), this%randoms_(1:this%nall_))
     call this%update_norishiro()
   end subroutine set_random_spin_xy2d_gpu
   attributes(global) pure subroutine set_random_spin_sub(n, spins, randoms)
