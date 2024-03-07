@@ -27,3 +27,7 @@ main = "ising2d_gpu_relaxation.f90"
 name = "xy2d_gpu_relaxation"
 source-dir = "app"
 main = "xy2d_gpu_relaxation.f90"
+[[executable]]
+name = "clock_gpu_relaxation"
+source-dir = "app"
+main = "clock_gpu_relaxation.f90"
