@@ -11,7 +11,8 @@ state=6
 
 progfile="./app/clock_gpu_relaxation.f90"
 execfile="./bin/clock_gpu_relaxation"
-outputfile="data/XY/2D-XY_GPU_x${nx}_y${ny}_mcs${mcs}_sample${sample}_kbt${kbt}_$(date +%Y%m%d_%H%M%S).dat"
+outputfile="data/clock/${state}tate-clock_GPU_x${nx}_y${ny}_mcs${mcs}_sample${sample}_kbt${kbt}_$(date +%Y%m%d_%H%M%S).dat"
+mkdir -p "data/clock"
 tmpdir="data/tmp"
 mkdir -p "${tmpdir}"
 tmpfile="$(mktemp --tmpdir=${tmpdir})"
