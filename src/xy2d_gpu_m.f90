@@ -210,32 +210,33 @@ contains
   pure real(real64) function calc_energy_sum_xy2d_gpu(this) result(res)
     class(xy2d_gpu), intent(in) :: this
     integer(int64) :: i
-    res = calc_energy_sum_sub(this%nall_, this%norishiro_end_, this%spins_(1:this%norishiro_end_, 1:2))
+    res = calc_energy_sum_sub(this%nall_, this%norishiro_end_, this%spins_(1:this%norishiro_end_, 1)) + &
+         & calc_energy_sum_sub(this%nall_, this%norishiro_end_, this%spins_(1:this%norishiro_end_, 2))
   contains
-    pure integer(int64) function calc_energy_sum_sub(n, norishiro_end, spins) result(res)
+    pure real(real64) function calc_energy_sum_sub(n, norishiro_end, spins) result(res)
       integer(int64), intent(in) :: n, norishiro_end
-      real(real64), intent(in), device :: spins(norishiro_end, 1:2)
+      real(real64), intent(in), device :: spins(norishiro_end)
       integer(int64) :: i
-      res = 0_int64
+      res = 0.0_real64
       !$acc parallel loop present(spins) reduction(+:res)
       do i = 1, n
-         res = res + sum(- spins(i, :) * (spins(i + 1, :) + spins(i + this%nx_, :)))
+         res = res - spins(i) * (spins(i + 1) + spins(i + this%nx_))
       end do
     end function calc_energy_sum_sub
   end function calc_energy_sum_xy2d_gpu
   !> calc_magne_sum_xy2d_gpu: Calculate summation of energy.
   pure real(real64) function calc_magne_sum_xy2d_gpu(this) result(res)
     class(xy2d_gpu), intent(in) :: this
-    res = calc_magne_sum_sub(this%nall_, this%spins_(1:this%nall_, 1:2))
+    res = calc_magne_sum_sub(this%nall_, this%spins_(1:this%nall_, 1))
   contains
-    pure integer(int64) function calc_magne_sum_sub(n, spins) result(res)
+    pure real(real64) function calc_magne_sum_sub(n, spins) result(res)
       integer(int64), intent(in) :: n
-      real(real64), intent(in), device :: spins(n, 1:2)
+      real(real64), intent(in), device :: spins(n)
       integer(int64) :: i
-      res = 0_int64
+      res = 0.0_real64
       !$acc parallel loop present(spins) reduction(+:res)
       do i = 1, n
-         res = res + spins(i, 1)
+         res = res + spins(i)
       end do
     end function calc_magne_sum_sub
   end function calc_magne_sum_xy2d_gpu
