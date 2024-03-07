@@ -204,7 +204,7 @@ contains
       res = 0_int64
       !$acc parallel loop present(spins) reduction(+:res)
       do i = 1, n
-         res = res - int(this%spins_(i) * (this%spins_(i + 1) + this%spins_(i + this%nx_)), int64)
+         res = res - int(spins(i) * (spins(i + 1) + spins(i + this%nx_)), int64)
       end do
     end function calc_energy_sum_sub
   end function calc_energy_sum_ising2d_gpu
