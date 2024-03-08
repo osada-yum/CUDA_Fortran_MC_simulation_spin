@@ -15,6 +15,21 @@ program xy2d_gpu_relaxation
   type(variance_covariance_kahan) :: order_parameter(mcs)
   integer(int32) :: i, sample
   call xy2d%init(nx, ny, kbt, iseed)
+  write(error_unit, '(a, i0)') "# size: ", xy2d%nall()
+  write(error_unit, '(a, i0, 1x, i0)') "# nx, ny: ", xy2d%nx(), xy2d%ny()
+  write(error_unit, '(a, i0)') "# sample: ", tot_sample
+  write(error_unit, '(a, i0)') "# mcs: ", mcs
+  write(error_unit, '(a, g0)') "# kbt: ", kbt
+  write(error_unit, '(a, i0)' ) "# initial seed: ", iseed
+  write(error_unit, '(a)' ) "# method: Metropolis"
+
+  write(output_unit, '(a, i0)') "# size: ", xy2d%nall()
+  write(output_unit, '(a, i0, 1x, i0)') "# nx, ny: ", xy2d%nx(), xy2d%ny()
+  write(output_unit, '(a, i0)') "# sample: ", tot_sample
+  write(output_unit, '(a, i0)') "# mcs: ", mcs
+  write(output_unit, '(a, g0)') "# kbt: ", kbt
+  write(output_unit, '(a, i0)' ) "# initial seed: ", iseed
+  write(output_unit, '(a)' ) "# method: Metropolis"
   do sample = 1, tot_sample
      write(error_unit, '(*(a, i0))') "Sample: ", sample, " / ", tot_sample
      call xy2d%set_allup_spin()
@@ -26,13 +41,6 @@ program xy2d_gpu_relaxation
         call order_parameter(i)%add_data(m * n_inv_r64, e * n_inv_r64)
      end do
   end do
-  write(output_unit, '(a, i0)') "# size: ", xy2d%nall()
-  write(output_unit, '(a, i0, 1x, i0)') "# nx, ny: ", xy2d%nx(), xy2d%ny()
-  write(output_unit, '(a, i0)') "# sample: ", tot_sample
-  write(output_unit, '(a, i0)') "# mcs: ", mcs
-  write(output_unit, '(a, g0)') "# kbt: ", kbt
-  write(output_unit, '(a, i0)' ) "# initial seed: ", iseed
-  write(output_unit, '(a)' ) "# method: Metropolis"
   do i = 1, mcs
      write(output_unit, '(*(g0, 1x))') xy2d%nall(), order_parameter(i)%num_sample(), i, &
           & order_parameter(i)%mean1(), order_parameter(i)%mean2(), &
