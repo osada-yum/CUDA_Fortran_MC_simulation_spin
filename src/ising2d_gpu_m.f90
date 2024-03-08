@@ -41,10 +41,11 @@ module ising2d_gpu_m
      procedure, pass :: calc_magne_sum => calc_magne_sum_ising2d_gpu
   end type ising2d_gpu
 contains
-  impure subroutine init_ising2d_gpu(this, nx, ny, kbt)
+  impure subroutine init_ising2d_gpu(this, nx, ny, kbt, iseed)
     class(ising2d_gpu), intent(inout) :: this
     integer(int64), intent(in) :: nx, ny
     real(real64), intent(in) :: kbt
+    integer(int32), intent(in) :: iseed
     this%nx_ = nx
     this%ny_ = ny
     this%nall_ = nx * ny
@@ -53,6 +54,7 @@ contains
     allocate(this%spins_(this%norishiro_begin_:this%norishiro_end_))
     allocate(this%randoms_(1:this%nall_))
     ising2d_gpu_stat = curandCreateGenerator(this%rand_gen_, CURAND_RNG_PSEUDO_XORWOW)
+    ising2d_gpu_stat = curandSetPseudoRandomGeneratorSeed(this%rand_gen_, iseed)
     call this%set_allup_spin()
     allocate(this%exparr_(lb_exparr:ub_exparr))
     call this%set_kbt(kbt)

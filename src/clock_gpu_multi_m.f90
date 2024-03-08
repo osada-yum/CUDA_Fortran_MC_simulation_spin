@@ -47,11 +47,12 @@ module clock_gpu_multi_m
      procedure, pass :: calc_magne_sum => calc_magne_sum_clock_gpu
   end type clock_gpu
 contains
-  impure subroutine init_clock_gpu(this, nx, ny, kbt, state, n_multi)
+  impure subroutine init_clock_gpu(this, nx, ny, kbt, state, n_multi, iseed)
     class(clock_gpu), intent(inout) :: this
     integer(int64), intent(in) :: nx, ny
     real(real64), intent(in) :: kbt
     integer(int32), intent(in) :: state, n_multi
+    integer(int32), intent(in) :: iseed
     integer(int32) :: i
     this%nx_ = nx
     this%ny_ = ny
@@ -73,6 +74,7 @@ contains
       allocate(this%spin_magne_(0:state-1), source = spin_magne)
     end block
     clock_gpu_stat = curandCreateGenerator(this%rand_gen_, CURAND_RNG_PSEUDO_XORWOW)
+    clock_gpu_stat = curandSetPseudoRandomGeneratorSeed(this%rand_gen_, iseed)
     call this%set_allup_spin()
     allocate(this%energy_table_(0:state-1, 0:state-1, 0:state-1))
     allocate(this%ws_(0:state-1, 0:state-1, 0:state-1, 0:state-1, 0:state-1, 0:state-1))

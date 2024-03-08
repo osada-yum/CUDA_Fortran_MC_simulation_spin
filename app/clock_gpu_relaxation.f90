@@ -10,12 +10,14 @@ program clock_gpu_relaxation
   real(real64), parameter :: n_inv_r64 = 1 / real(nx * ny, real64)
   real(real64), parameter :: kbt = 0.80_real64
   integer(int32), parameter :: state = 6_int32
+  integer(int32), parameter :: iseed = 42
   type(clock_gpu) :: clock
   real(real64) :: m, e
   type(variance_covariance_kahan) :: order_parameter(mcs)
   integer(int32) :: i, sample
-  call clock%init(nx, ny, kbt, state)
+  call clock%init(nx, ny, kbt, state, iseed)
 
+  write(output_unit, '(a, i0)' ) "# initial seed: ", iseed
   do sample = 1, tot_sample
      write(error_unit, '(*(a, i0))') "Sample: ", sample, " / ", tot_sample
      call clock%set_allup_spin()

@@ -9,11 +9,12 @@ program ising2d_gpu_relaxation
   integer(int64), parameter :: ny = 1000_int64
   real(real64), parameter :: n_inv_r64 = 1 / real(nx * ny, real64)
   real(real64), parameter :: kbt = 2.26918531421_real64
+  integer(int32), parameter :: iseed = 42
   type(ising2d_gpu) :: ising2d
   integer(int64) :: m, e
   type(variance_covariance_kahan) :: order_parameter(mcs)
   integer(int32) :: i, sample
-  call ising2d%init(nx, ny, kbt)
+  call ising2d%init(nx, ny, kbt, iseed)
 
   do sample = 1, tot_sample
      write(error_unit, '(*(a, i0))') "Sample: ", sample, " / ", tot_sample
@@ -31,6 +32,7 @@ program ising2d_gpu_relaxation
   write(output_unit, '(a, i0)') "# sample: ", tot_sample
   write(output_unit, '(a, i0)') "# mcs: ", mcs
   write(output_unit, '(a, g0)') "# kbt: ", kbt
+  write(output_unit, '(a, i0)' ) "# initial seed: ", iseed
   write(output_unit, '(a)' ) "# method: Metropolis"
   do i = 1, mcs
      write(output_unit, '(*(g0, 1x))') ising2d%nall(), order_parameter(i)%num_sample(), i, &

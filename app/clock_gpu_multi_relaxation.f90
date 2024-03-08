@@ -10,18 +10,20 @@ program clock_gpu_multi_relaxation
   real(real64), parameter :: n_inv_r64 = 1 / real(nx * ny, real64)
   real(real64), parameter :: kbt = 0.80_real64
   integer(int32), parameter :: state = 6_int32
+  integer(int32), parameter :: iseed = 42
   integer(int32), parameter :: n_multi = 2_int32
   type(clock_gpu) :: clock
   real(real64) :: m(n_multi), e(n_multi)
   type(variance_covariance_kahan) :: order_parameter(mcs)
   integer(int32) :: i, j, sample
-  call clock%init(nx, ny, kbt, state, n_multi)
+  call clock%init(nx, ny, kbt, state, n_multi, iseed)
 
   write(error_unit, '(a, i0)') "# size: ", clock%nall()
   write(error_unit, '(a, 3(i0, 1x))') "# nx, ny: ", clock%nx(), clock%ny(), state
   write(error_unit, '(2(a, i0))') "# sample: ", tot_sample, " x ", n_multi
   write(error_unit, '(a, i0)') "# mcs: ", mcs
   write(error_unit, '(a, g0)') "# kbt: ", kbt
+  write(error_unit, '(a, i0)' ) "# initial seed: ", iseed
   write(error_unit, '(a)' ) "# method: Metropolis"
 
   write(output_unit, '(a, i0)') "# size: ", clock%nall()
@@ -29,6 +31,7 @@ program clock_gpu_multi_relaxation
   write(output_unit, '(2(a, i0))') "# sample: ", tot_sample, " x ", n_multi
   write(output_unit, '(a, i0)') "# mcs: ", mcs
   write(output_unit, '(a, g0)') "# kbt: ", kbt
+  write(output_unit, '(a, i0)' ) "# initial seed: ", iseed
   write(output_unit, '(a)' ) "# method: Metropolis"
   do sample = 1, tot_sample
      write(error_unit, '(*(a, i0))') "Sample: ", sample, " / ", tot_sample

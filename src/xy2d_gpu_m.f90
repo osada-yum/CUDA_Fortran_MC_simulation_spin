@@ -41,10 +41,11 @@ module xy2d_gpu_m
      procedure, pass :: calc_magne_sum => calc_magne_sum_xy2d_gpu
   end type xy2d_gpu
 contains
-  impure subroutine init_xy2d_gpu(this, nx, ny, kbt)
+  impure subroutine init_xy2d_gpu(this, nx, ny, kbt, iseed)
     class(xy2d_gpu), intent(inout) :: this
     integer(int64), intent(in) :: nx, ny
     real(real64), intent(in) :: kbt
+    integer(int32), intent(in) :: iseed
     this%nx_ = nx
     this%ny_ = ny
     this%nall_ = nx * ny
@@ -54,6 +55,7 @@ contains
     allocate(this%randoms_(1:this%nall_))
     allocate(this%candidates_(1:this%nall_))
     xy2d_gpu_stat = curandCreateGenerator(this%rand_gen_, CURAND_RNG_PSEUDO_XORWOW)
+    xy2d_gpu_stat = curandSetPseudoRandomGeneratorSeed(this%rand_gen_, iseed)
     call this%set_allup_spin()
     call this%set_kbt(kbt)
   end subroutine init_xy2d_gpu
