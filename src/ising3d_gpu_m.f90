@@ -140,16 +140,16 @@ contains
     ub = ubound(this%spins_, dim = 1, kind = int64)
     ising3d_gpu_stat = curandGenerate(this%rand_gen_, this%randoms_(1:this%nall_), this%nall_)
     call update_sub <<<(this%nall_ + NUM_THREADS - 1) / NUM_THREADS, NUM_THREADS>>> &
-         & (lb, ub, this%nx_, this%nall_, this%spins_, this%randoms_(1:this%nall_), this%exparr_, 1)
+         & (lb, ub, this%nx_, this%nxy_, this%nall_, this%spins_, this%randoms_(1:this%nall_), this%exparr_, 1)
     ising3d_gpu_stat = cudaDeviceSynchronize()
     call this%update_norishiro()
     call update_sub <<<(this%nall_ + NUM_THREADS - 1) / NUM_THREADS, NUM_THREADS>>> &
-         & (lb, ub, this%nx_, this%nall_, this%spins_, this%randoms_(1:this%nall_), this%exparr_, 2)
+         & (lb, ub, this%nx_, this%nxy_, this%nall_, this%spins_, this%randoms_(1:this%nall_), this%exparr_, 2)
     ising3d_gpu_stat = cudaDeviceSynchronize()
     call this%update_norishiro()
   end subroutine update_ising3d_gpu
-  attributes(global) pure subroutine update_sub(lb, ub, nx, nall, spins, randoms, exparr, offset)
-    integer(int64), value :: lb, ub, nx, nall
+  attributes(global) pure subroutine update_sub(lb, ub, nx, nxy, nall, spins, randoms, exparr, offset)
+    integer(int64), value :: lb, ub, nx, nxy, nall
     integer(int32), intent(inout) :: spins(lb:ub)
     real(real64), intent(in) :: randoms(nall), exparr(lb_exparr:ub_exparr)
     integer(int32), value :: offset
@@ -158,7 +158,7 @@ contains
     idx = 2 * ((blockIdx%x - 1) * blockDim%x + threadIdx%x) - 2 + offset
     if (idx > nall) return
     !> do idx = offset, this%nall_, 2
-    delta_energy = calc_delta_energy(lb, ub, nx, spins, idx)
+    delta_energy = calc_delta_energy(lb, ub, nx, nxy, spins, idx)
     if (randoms(idx) >= exparr(delta_energy)) return
     !> randoms(idx) < exparr(delta_energy)
     spins(idx) = - spins(idx)
@@ -172,6 +172,10 @@ contains
     class(ising3d_gpu), intent(in) :: this
     res = this%ny_
   end function ny_ising3d_gpu
+  pure integer(int64) function nz_ising3d_gpu(this) result(res)
+    class(ising3d_gpu), intent(in) :: this
+    res = this%nz_
+  end function nz_ising3d_gpu
   pure integer(int64) function nall_ising3d_gpu(this) result(res)
     class(ising3d_gpu), intent(in) :: this
     res = this%nall_
@@ -191,11 +195,14 @@ contains
   end function spins_ising3d_gpu
 
   !> calc_delta_energy: Calculate delta energy if spins_(idx) is flipped.
-  attributes(device) pure integer(int32) function calc_delta_energy(lb, ub, nx, spins, idx) result(res)
-    integer(int64), value :: lb, ub, nx
+  attributes(device) pure integer(int32) function calc_delta_energy(lb, ub, nx, nxy, spins, idx) result(res)
+    integer(int64), value :: lb, ub, nx, nxy
     integer(int32), intent(in) :: spins(lb:ub)
     integer(int64), value :: idx
-    res = 2 * spins(idx) * (spins(idx + 1) + spins(idx - 1) + spins(idx + nx) + spins(idx - nx))
+    res = 2 * spins(idx) * (&
+         & spins(idx + 1) + spins(idx - 1) + &
+         & spins(idx + nx) + spins(idx - nx) + &
+         & spins(idx + nxy) + spins(idx - nxy))
   end function calc_delta_energy
   !> calc_energy_sum_ising3d_gpu: Calculate summation of energy.
   pure integer(int64) function calc_energy_sum_ising3d_gpu(this) result(res)
@@ -209,7 +216,7 @@ contains
       res = 0_int64
       !$acc parallel loop present(spins) reduction(+:res)
       do i = 1, n
-         res = res - int(spins(i) * (spins(i + 1) + spins(i + this%nx_)), int64)
+         res = res - int(spins(i) * (spins(i + 1) + spins(i + this%nx_) + spins(i + this%nxy_)), int64)
       end do
     end function calc_energy_sum_sub
   end function calc_energy_sum_ising3d_gpu
