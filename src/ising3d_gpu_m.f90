@@ -7,8 +7,10 @@ module ising3d_gpu_m
   private
   integer(int32), public, protected :: ising3d_gpu_stat
   integer(int64), parameter :: NUM_THREADS = 512
-  integer(int32), parameter :: lb_exparr = -12, ub_exparr = 12
-  real(real64), constant :: exparr(lb_exparr:ub_exparr)
+  integer(int64), constant :: energy_table(0:3, 0:1)
+  real(real64), constant :: ws(0:6, 0:1)
+  integer(int32), parameter :: spin_map(0:1) = [-1, 1]
+  integer(int32), constant :: spin_map_c(0:1)
   public :: ising3d_gpu
   type :: ising3d_gpu
      private
@@ -17,7 +19,8 @@ module ising3d_gpu_m
      integer(int64) :: norishiro_begin_, norishiro_end_
      integer(int32), allocatable, device :: spins_(:)
      real(real64), allocatable, device :: randoms_(:)
-     real(real64), allocatable :: exparr_(:)
+     integer(int64), allocatable :: energy_table_(:, :)
+     real(real64), allocatable :: ws_(:, :)
      type(curandGenerator) :: rand_gen_
    contains
      procedure, pass :: init => init_ising3d_gpu
@@ -28,7 +31,7 @@ module ising3d_gpu_m
      procedure, pass :: set_kbt => set_kbt_ising3d_gpu
      procedure, pass :: set_beta => set_beta_ising3d_gpu
      !> updater.
-     procedure, pass, private :: update_exparr => update_exparr_ising3d_gpu
+     procedure, pass, private :: update_ws => update_ws_ising3d_gpu
      procedure, pass, private :: update_norishiro => update_norishiro_ising3d_gpu
      procedure, pass :: update => update_ising3d_gpu
      !> getter.
@@ -61,7 +64,9 @@ contains
     ising3d_gpu_stat = curandCreateGenerator(this%rand_gen_, CURAND_RNG_PSEUDO_XORWOW)
     ising3d_gpu_stat = curandSetPseudoRandomGeneratorSeed(this%rand_gen_, iseed)
     call this%set_allup_spin()
-    allocate(this%exparr_(lb_exparr:ub_exparr))
+    spin_map_c(:) = spin_map(:)
+    allocate(this%energy_table_(0:3, 0:1))
+    allocate(this%ws_(0:6, 0:1))
     call this%set_kbt(kbt)
   end subroutine init_ising3d_gpu
  impure subroutine skip_curand_ising3d_gpu(this, n_skip)
@@ -79,7 +84,7 @@ contains
   impure subroutine set_random_spin_ising3d_gpu(this)
     class(ising3d_gpu), intent(inout) :: this
     ising3d_gpu_stat = curandGenerate(this%rand_gen_, this%randoms_, this%nall_)
-    call set_random_spin_sub<<<(this%nall_ + NUM_THREADS - 1)/NUM_THREADS, NUM_THREADS>>>(this%nall_, this%spins_(1:this%nall_), this%randoms_(1:this%nall_))
+    call set_random_spin_sub <<<(this%nall_ + NUM_THREADS - 1)/NUM_THREADS, NUM_THREADS>>>(this%nall_, this%spins_(1:this%nall_), this%randoms_(1:this%nall_))
     ising3d_gpu_stat = cudaDeviceSynchronize()
     call this%update_norishiro()
   end subroutine set_random_spin_ising3d_gpu
@@ -91,7 +96,7 @@ contains
     idx = (blockIdx%x - 1) * blockDim%x + threadIdx%x
     if (idx > n) return !> over norishiro.
     !> 1 <= idx <= this%nall_.
-    spins(idx) = merge(1, -1, randoms(idx) < 0.5_real64)
+    spins(idx) = merge(1, 0, randoms(idx) < 0.5_real64)
   end subroutine set_random_spin_sub
   !> update_norishiro_ising3d_gpu: Update norishiro by GPU.
   impure subroutine update_norishiro_ising3d_gpu(this)
@@ -126,21 +131,45 @@ contains
     class(ising3d_gpu), intent(inout) :: this
     real(real64), intent(in) :: beta
     this%beta_ = beta
-    call this%update_exparr()
+    call this%update_ws()
   end subroutine set_beta_ising3d_gpu
-  !> update_exparr_ising3d_gpu: Update exparr_(:) by temperature.
+  !> update_ws_ising3d_gpu: Update exparr_(:) by temperature.
   !> Because Ising model is discrete, we can calculate `exp(-βΔE)` in advance.
-  pure subroutine update_exparr_ising3d_gpu(this)
+  pure subroutine update_ws_ising3d_gpu(this)
     class(ising3d_gpu), intent(inout) :: this
     real(real64) :: tmp
-    integer(int32) :: diff
-    this%exparr_(:) = 1.0_real64
-    do diff = 1, ub_exparr
-       !> diff > 0.
-       this%exparr_(diff) = exp(- this%beta() * diff)
+    integer(int64) :: e1, e2
+    integer(int32) :: i1, i2, i3, i4, i5, i6, s1, s2
+    do i1 = 0, 1
+       do i2 = 0, 1
+          do i3 = 0, 1
+             s1 = i1 + i2 + i3
+             this%energy_table_(s1, 0) = - spin_map(0) * sum(spin_map([i1, i2, i3]))
+             this%energy_table_(s1, 1) = - spin_map(1) * sum(spin_map([i1, i2, i3]))
+          end do
+       end do
     end do
-    exparr(:) = this%exparr_(:)
-  end subroutine update_exparr_ising3d_gpu
+    energy_table(:, :) = this%energy_table_(:, :)
+    do i1 = 0, 1
+       do i2 = 0, 1
+          do i3 = 0, 1
+             s1 = i1 + i2 + i3
+             do i4 = 0, 1
+                do i5 = 0, 1
+                   do i6 = 0, 1
+                      s2 = i4 + i5 + i6
+                      e1 = this%energy_table_(s1, 0) + this%energy_table_(s2, 0)
+                      e2 = this%energy_table_(s1, 1) + this%energy_table_(s2, 1)
+                      this%ws_(s1 + s2, 0) = min(1.0_real64, exp(-this%beta_ * (e2 - e1)))
+                      this%ws_(s1 + s2, 1) = min(1.0_real64, exp(-this%beta_ * (e1 - e2)))
+                   end do
+                end do
+             end do
+          end do
+       end do
+    end do
+    ws(:, :) = this%ws_(:, :)
+  end subroutine update_ws_ising3d_gpu
   !> update_ising3d_gpu: Update by Metropolis method.
   impure subroutine update_ising3d_gpu(this)
     class(ising3d_gpu), intent(inout) :: this
@@ -162,15 +191,18 @@ contains
     integer(int32), intent(inout) :: spins(lb:ub)
     real(real64), intent(in) :: randoms(nall)
     integer(int32), value :: offset
-    integer(int32) :: delta_energy
+    integer(int32) :: sum_spin
     integer(int64) :: idx
     idx = 2 * ((blockIdx%x - 1) * blockDim%x + threadIdx%x) - 2 + offset
     if (idx > nall) return
     !> do idx = offset, this%nall_, 2
-    delta_energy = calc_delta_energy(lb, ub, nx, nxy, spins, idx)
-    if (randoms(idx) >= exparr(delta_energy)) return
-    !> randoms(idx) < exparr(delta_energy)
-    spins(idx) = - spins(idx)
+    sum_spin = &
+         & spins(idx - 1) + spins(idx + 1) + &
+         & spins(idx - nx) + spins(idx + nx) + &
+         & spins(idx - nxy) + spins(idx + nxy)
+    if (randoms(idx) >= ws(sum_spin, spins(idx))) return
+    !> randoms(idx) < ws(delta_energy)
+    spins(idx) = 1 - spins(idx)
   end subroutine update_sub
 
   pure integer(int64) function nx_ising3d_gpu(this) result(res)
@@ -203,30 +235,24 @@ contains
     allocate(res, source = this%spins_)
   end function spins_ising3d_gpu
 
-  !> calc_delta_energy: Calculate delta energy if spins_(idx) is flipped.
-  attributes(device) pure integer(int32) function calc_delta_energy(lb, ub, nx, nxy, spins, idx) result(res)
-    integer(int64), value :: lb, ub, nx, nxy
-    integer(int32), intent(in) :: spins(lb:ub)
-    integer(int64), value :: idx
-    res = 2 * spins(idx) * (&
-         & spins(idx + 1) + spins(idx - 1) + &
-         & spins(idx + nx) + spins(idx - nx) + &
-         & spins(idx + nxy) + spins(idx - nxy))
-  end function calc_delta_energy
   !> calc_energy_sum_ising3d_gpu: Calculate summation of energy.
   pure integer(int64) function calc_energy_sum_ising3d_gpu(this) result(res)
     class(ising3d_gpu), intent(in) :: this
-    res = calc_energy_sum_sub(this%nall_, this%norishiro_end_, this%spins_(1:this%norishiro_end_))
+    res = calc_energy_sum_sub(this%nall_, this%norishiro_end_, this%spins_(1:this%norishiro_end_), energy_table)
   contains
-    pure integer(int64) function calc_energy_sum_sub(n, norishiro_end, spins) result(res)
+    pure integer(int64) function calc_energy_sum_sub(n, norishiro_end, spins, energy_table) result(res)
       integer(int64), intent(in) :: n, norishiro_end
       integer(int32), intent(in), device :: spins(norishiro_end)
+      integer(int64), intent(in), device :: energy_table(0:3, 0:1)
       integer(int64) :: i
       res = 0_int64
-      !$acc parallel loop present(spins) reduction(+:res)
+      !$acc data present(energy_table(0:3, 0:1), spins)
+      !$acc parallel loop reduction(+:res)
       do i = 1, n
-         res = res - int(spins(i) * (spins(i + 1) + spins(i + this%nx_) + spins(i + this%nxy_)), int64)
+         ! res = res + (spins(i + 1) + spins(i + this%nx_) + spins(i + this%nxy_)) * spins(i)
+         res = res + energy_table(spins(i + 1) + spins(i + this%nx_) + spins(i + this%nxy_), spins(i))
       end do
+      !$acc end data
     end function calc_energy_sum_sub
   end function calc_energy_sum_ising3d_gpu
   !> calc_magne_sum_ising3d_gpu: Calculate summation of energy.
@@ -239,10 +265,13 @@ contains
       integer(int32), intent(in), device :: spins(n)
       integer(int64) :: i
       res = 0_int64
-      !$acc parallel loop present(spins) reduction(+:res)
+      !$acc data present(spins)
+      !$acc parallel loop reduction(+:res)
       do i = 1, n
          res = res + spins(i)
       end do
+      !$acc end data
+      res = 2 * res - n
     end function calc_magne_sum_sub
   end function calc_magne_sum_ising3d_gpu
 end module ising3d_GPU_m
