@@ -1,4 +1,4 @@
-!> CUDAFortran implementation for 2-dimensional Ising model.
+!> CUDAFortran implementation for 3-dimensional Ising model.
 module ising3d_gpu_m
   use, intrinsic :: iso_fortran_env
   use cudafor
@@ -20,6 +20,7 @@ module ising3d_gpu_m
      type(curandGenerator) :: rand_gen_
    contains
      procedure, pass :: init => init_ising3d_gpu
+     procedure, pass :: skip_curand => skip_curand_ising3d_gpu
      !> setter.
      procedure, pass :: set_allup_spin => set_allup_spin_ising3d_gpu
      procedure, pass :: set_random_spin => set_random_spin_ising3d_gpu
@@ -62,6 +63,12 @@ contains
     allocate(this%exparr_(lb_exparr:ub_exparr))
     call this%set_kbt(kbt)
   end subroutine init_ising3d_gpu
+ impure subroutine skip_curand_ising3d_gpu(this, n_skip)
+    class(ising3d_gpu), intent(inout) :: this
+    integer(int64), intent(in) :: n_skip
+    if (n_skip == 0_int64) return
+    ising3d_gpu_stat = curandSetGeneratorOffset(this%rand_gen_, n_skip)
+  end subroutine skip_curand_ising3d_gpu
   !> set_allup_spin_ising3d_gpu: Set 'ferromagnetic' initial state of Ising.
   pure subroutine set_allup_spin_ising3d_gpu(this)
     class(ising3d_gpu), intent(inout) :: this

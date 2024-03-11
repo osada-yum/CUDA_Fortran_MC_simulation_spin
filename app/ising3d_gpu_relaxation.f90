@@ -11,11 +11,13 @@ program ising3d_gpu_relaxation
   real(real64), parameter :: n_inv_r64 = 1 / real(nx * ny * nz, real64)
   real(real64), parameter :: kbt = 4.51152_real64
   integer(int32), parameter :: iseed = 42
+  integer(int64), parameter :: n_skip = 0_int64
   type(ising3d_gpu) :: ising3d
   integer(int64) :: m, e
   type(variance_covariance_kahan), allocatable :: order_parameter(:)
   integer(int32) :: i, sample
   call ising3d%init(nx, ny, nz, kbt, iseed)
+  call ising3d%skip_curand(n_skip * nx * ny * nz * (mcs + 1) * tot_sample)
   write(error_unit, '(a, i0)') "# size: ", ising3d%nall()
   write(error_unit, '(a, 3(i0, 1x))') "# nx, ny, nz: ", ising3d%nx(), ising3d%ny(), ising3d%nz()
   write(error_unit, '(a, i0)') "# sample: ", tot_sample
