@@ -8,6 +8,7 @@ module ising3d_gpu_m
   integer(int32), public, protected :: ising3d_gpu_stat
   integer(int64), parameter :: NUM_THREADS = 512
   integer(int32), parameter :: lb_exparr = -12, ub_exparr = 12
+  real(real64), constant :: exparr(lb_exparr:ub_exparr)
   public :: ising3d_gpu
   type :: ising3d_gpu
      private
@@ -15,8 +16,8 @@ module ising3d_gpu_m
      integer(int64) :: nx_, ny_, nz_, nxy_, nall_
      integer(int64) :: norishiro_begin_, norishiro_end_
      integer(int32), allocatable, device :: spins_(:)
-     real(real64), allocatable, device :: exparr_(:)
      real(real64), allocatable, device :: randoms_(:)
+     real(real64), allocatable :: exparr_(:)
      type(curandGenerator) :: rand_gen_
    contains
      procedure, pass :: init => init_ising3d_gpu
@@ -138,6 +139,7 @@ contains
        !> diff > 0.
        this%exparr_(diff) = exp(- this%beta() * diff)
     end do
+    exparr(:) = this%exparr_(:)
   end subroutine update_exparr_ising3d_gpu
   !> update_ising3d_gpu: Update by Metropolis method.
   impure subroutine update_ising3d_gpu(this)
@@ -147,18 +149,18 @@ contains
     ub = ubound(this%spins_, dim = 1, kind = int64)
     ising3d_gpu_stat = curandGenerate(this%rand_gen_, this%randoms_(1:this%nall_), this%nall_)
     call update_sub <<<(this%nall_ + NUM_THREADS - 1) / NUM_THREADS, NUM_THREADS>>> &
-         & (lb, ub, this%nx_, this%nxy_, this%nall_, this%spins_, this%randoms_(1:this%nall_), this%exparr_, 1)
+         & (lb, ub, this%nx_, this%nxy_, this%nall_, this%spins_, this%randoms_(1:this%nall_), 1)
     ising3d_gpu_stat = cudaDeviceSynchronize()
     call this%update_norishiro()
     call update_sub <<<(this%nall_ + NUM_THREADS - 1) / NUM_THREADS, NUM_THREADS>>> &
-         & (lb, ub, this%nx_, this%nxy_, this%nall_, this%spins_, this%randoms_(1:this%nall_), this%exparr_, 2)
+         & (lb, ub, this%nx_, this%nxy_, this%nall_, this%spins_, this%randoms_(1:this%nall_), 2)
     ising3d_gpu_stat = cudaDeviceSynchronize()
     call this%update_norishiro()
   end subroutine update_ising3d_gpu
-  attributes(global) pure subroutine update_sub(lb, ub, nx, nxy, nall, spins, randoms, exparr, offset)
+  attributes(global) pure subroutine update_sub(lb, ub, nx, nxy, nall, spins, randoms, offset)
     integer(int64), value :: lb, ub, nx, nxy, nall
     integer(int32), intent(inout) :: spins(lb:ub)
-    real(real64), intent(in) :: randoms(nall), exparr(lb_exparr:ub_exparr)
+    real(real64), intent(in) :: randoms(nall)
     integer(int32), value :: offset
     integer(int32) :: delta_energy
     integer(int64) :: idx
