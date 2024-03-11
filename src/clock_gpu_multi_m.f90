@@ -299,7 +299,7 @@ contains
     pure function calc_magne_sum_sub(lb, ub, n, max_state, n_multi, spins, spin_magne) result(res)
       integer(int64), intent(in) :: lb, ub, n
       integer(int32), intent(in) :: max_state, n_multi
-      integer(int32), intent(in), device :: spins(lb, ub, n_multi)
+      integer(int32), intent(in), device :: spins(lb:ub, n_multi)
       real(real64), intent(in), device :: spin_magne(0:max_state-1)
       real(real64) :: res(n_multi)
       integer(int64) :: i
