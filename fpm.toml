@@ -24,6 +24,10 @@ name = "ising2d_gpu_relaxation"
 source-dir = "app"
 main = "ising2d_gpu_relaxation.f90"
 [[executable]]
+name = "ising3d_gpu_relaxation"
+source-dir = "app"
+main = "ising3d_gpu_relaxation.f90"
+[[executable]]
 name = "xy2d_gpu_relaxation"
 source-dir = "app"
 main = "xy2d_gpu_relaxation.f90"
