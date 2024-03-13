@@ -104,21 +104,21 @@ contains
     integer(int64) :: lb, ub
     lb = lbound(this%spins_, dim = 1, kind = int64)
     ub = ubound(this%spins_, dim = 1, kind = int64)
-    call update_norishiro_sub <<<(this%nx_ + NUM_THREADS - 1)/NUM_THREADS, NUM_THREADS>>> &
-         & (lb, ub, this%nx_, this%nall_, this%spins_)
+    call update_norishiro_sub <<<(this%nxy_ + NUM_THREADS - 1)/NUM_THREADS, NUM_THREADS>>> &
+         & (lb, ub, this%nxy_, this%nall_, this%spins_)
     ising3d_gpu_stat = cudaDeviceSynchronize()
   end subroutine update_norishiro_ising3d_gpu
-  attributes(global) pure subroutine update_norishiro_sub(lb, ub, nx, nall, spins)
-    integer(int64), value :: lb, ub, nx, nall
+  attributes(global) pure subroutine update_norishiro_sub(lb, ub, nxy, nall, spins)
+    integer(int64), value :: lb, ub, nxy, nall
     integer(int32), intent(inout) :: spins(lb:ub)
     integer(int64) :: idx
     idx = (blockIdx%x - 1) * blockDim%x + threadIdx%x
-    if (idx > nx) return !> over norishiro.
-    !> 1 <= idx <= this%nx_
-    ! norishiro top, [nall+1:nall+nx] <- [1:nx]
+    if (idx > nxy) return !> over norishiro.
+    !> 1 <= idx <= this%nxy_
+    ! norishiro top, [nall+1:nall+nxy] <- [1:nxy]
     spins(nall + idx) = spins(idx)
-    ! norishiro bottom, [-nx:0] <- [nall-nx+1:nall]
-    spins(idx - nx) = spins(nall - nx + idx)
+    ! norishiro bottom, [-nxy:0] <- [nall-nxy+1:nall]
+    spins(idx - nxy) = spins(nall - nxy + idx)
   end subroutine update_norishiro_sub
   !> set_kbt_ising3d_gpu: Set new kbt.
   pure subroutine set_kbt_ising3d_gpu(this, kbt)
