@@ -3,7 +3,6 @@ module xy2d_gpu_m
   use, intrinsic :: iso_fortran_env
   use cudafor
   use curand
-  use kahan_summation_m
   implicit none
   private
   real(real64), parameter :: pi = 4 * atan(1.0_real64)
