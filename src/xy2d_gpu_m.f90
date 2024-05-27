@@ -20,6 +20,7 @@ module xy2d_gpu_m
      type(curandGenerator) :: rand_gen_
    contains
      procedure, pass :: init => init_xy2d_gpu
+     procedure, pass :: skip_curand => skip_curand_xy2d_gpu
      !> setter.
      procedure, pass :: set_allup_spin => set_allup_spin_xy2d_gpu
      procedure, pass :: set_random_spin => set_random_spin_xy2d_gpu
@@ -58,6 +59,12 @@ contains
     call this%set_allup_spin()
     call this%set_kbt(kbt)
   end subroutine init_xy2d_gpu
+ impure subroutine skip_curand_xy2d_gpu(this, n_skip)
+    class(xy2d_gpu), intent(inout) :: this
+    integer(int64), intent(in) :: n_skip
+    if (n_skip == 0_int64) return
+    xy2d_gpu_stat = curandSetGeneratorOffset(this%rand_gen_, n_skip)
+  end subroutine skip_curand_xy2d_gpu
   !> set_allup_spin_xy2d_gpu: Set 'ferromagnetic' initial state of XY.
   impure subroutine set_allup_spin_xy2d_gpu(this)
     class(xy2d_gpu), intent(inout) :: this
