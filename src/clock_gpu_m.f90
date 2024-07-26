@@ -209,9 +209,9 @@ contains
     if (idx > nall) return
     !> do idx = offset, this%nall_, 2
     next_state = floor(next_states(idx) * max_state)
-    if (randoms(idx) >= ws(spins(idx + nx), spins(idx - nx), spins(idx - 1), spins(idx + 1), spins(idx), next_state)) &
+    if (randoms(idx) > ws(spins(idx + nx), spins(idx - nx), spins(idx - 1), spins(idx + 1), spins(idx), next_state)) &
          & return
-    !> randoms(idx) < exparr(delta_energy)
+    !> randoms(idx) <= exparr(delta_energy)
     spins(idx) = next_state
   end subroutine update_sub
 

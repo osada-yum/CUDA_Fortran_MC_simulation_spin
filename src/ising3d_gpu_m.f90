@@ -200,8 +200,8 @@ contains
          & spins(idx - 1) + spins(idx + 1) + &
          & spins(idx - nx) + spins(idx + nx) + &
          & spins(idx - nxy) + spins(idx + nxy)
-    if (randoms(idx) >= ws(sum_spin, spins(idx))) return
-    !> randoms(idx) < ws(delta_energy)
+    if (randoms(idx) > ws(sum_spin, spins(idx))) return
+    !> randoms(idx) <= ws(delta_energy)
     spins(idx) = 1 - spins(idx)
   end subroutine update_sub
 

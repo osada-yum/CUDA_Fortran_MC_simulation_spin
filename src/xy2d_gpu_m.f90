@@ -165,8 +165,8 @@ contains
     !> do idx = offset, this%nall_, 2
     candidate(1:2) = [cos(2 * pi * candidates(idx)), sin(2 * pi * candidates(idx))]
     delta_energy = calc_delta_energy(lb, ub, nx, spins, idx, candidate)
-    if (randoms(idx) >= exp(- beta * delta_energy)) return
-    !> randoms(idx) < exp(- beta * delta_energy)
+    if (randoms(idx) > exp(- beta * delta_energy)) return
+    !> randoms(idx) <= exp(- beta * delta_energy)
     spins(idx, :) = candidate(:)
   end subroutine update_sub
 

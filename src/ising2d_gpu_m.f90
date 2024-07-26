@@ -156,8 +156,8 @@ contains
     if (idx > nall) return
     !> do idx = offset, this%nall_, 2
     delta_energy = calc_delta_energy(lb, ub, nx, spins, idx)
-    if (randoms(idx) >= exparr(delta_energy)) return
-    !> randoms(idx) < exparr(delta_energy)
+    if (randoms(idx) > exparr(delta_energy)) return
+    !> randoms(idx) <= exparr(delta_energy)
     spins(idx) = - spins(idx)
   end subroutine update_sub
 
