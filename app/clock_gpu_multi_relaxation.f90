@@ -1,3 +1,4 @@
+!> 多分遅い...
 program clock_gpu_multi_relaxation
   use, intrinsic :: iso_fortran_env
   use clock_gpu_multi_m
