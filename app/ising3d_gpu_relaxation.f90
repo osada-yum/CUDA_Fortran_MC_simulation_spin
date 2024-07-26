@@ -50,7 +50,7 @@ program ising3d_gpu_relaxation
      write(output_unit, '(*(g0, 1x))') ising3d%nall(), order_parameter(i)%num_sample(), i, &
           & order_parameter(i)%mean1(), order_parameter(i)%mean2(), &
           & order_parameter(i)%square_mean1(), order_parameter(i)%square_mean2(), &
-          & order_parameter(i)%var1(), order_parameter(i)%var2(), &
-          & order_parameter(i)%cov()
+          & ising3d%nall() * order_parameter(i)%var1(), ising3d%nall() * order_parameter(i)%var2(), &
+          & ising3d%nall() * order_parameter(i)%cov()
   end do
 end program ising3d_gpu_relaxation

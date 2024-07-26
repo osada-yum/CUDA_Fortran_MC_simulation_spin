@@ -31,6 +31,7 @@ program clock_gpu_relaxation
   write(output_unit, '(a, g0)') "# kbt: ", kbt
   write(output_unit, '(a, i0)' ) "# initial seed: ", iseed
   write(output_unit, '(a)' ) "# method: Metropolis"
+  allocate(order_parameter(mcs), source = variance_covariance_kahan())
   do sample = 1, tot_sample
      write(error_unit, '(*(a, i0))') "Sample: ", sample, " / ", tot_sample
      call clock%set_allup_spin()
@@ -38,7 +39,8 @@ program clock_gpu_relaxation
      do i = 1, mcs
         call clock%update()
         m = clock%calc_magne_sum()
-        e = clock%calc_energy_sum()
+        e = 0.0_real64
+        ! e = clock%calc_energy_sum()
         call order_parameter(i)%add_data(m * n_inv_r64, e * n_inv_r64)
      end do
   end do
@@ -46,7 +48,7 @@ program clock_gpu_relaxation
      write(output_unit, '(*(g0, 1x))') clock%nall(), order_parameter(i)%num_sample(), i, &
           & order_parameter(i)%mean1(), order_parameter(i)%mean2(), &
           & order_parameter(i)%square_mean1(), order_parameter(i)%square_mean2(), &
-          & order_parameter(i)%var1(), order_parameter(i)%var2(), &
-          & order_parameter(i)%cov()
+          & clock%nall() * order_parameter(i)%var1(), clock%nall() * order_parameter(i)%var2(), &
+          & clock%nall() * order_parameter(i)%cov()
   end do
 end program clock_gpu_relaxation

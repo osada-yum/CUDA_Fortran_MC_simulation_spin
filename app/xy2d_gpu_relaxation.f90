@@ -38,6 +38,7 @@ program xy2d_gpu_relaxation
         call xy2d%update()
         m = xy2d%calc_magne_sum()
         e = xy2d%calc_energy_sum()
+        ! write(error_unit, '(*(g0, 1x))') i, m, e
         call order_parameter(i)%add_data(m * n_inv_r64, e * n_inv_r64)
      end do
   end do
@@ -45,7 +46,7 @@ program xy2d_gpu_relaxation
      write(output_unit, '(*(g0, 1x))') xy2d%nall(), order_parameter(i)%num_sample(), i, &
           & order_parameter(i)%mean1(), order_parameter(i)%mean2(), &
           & order_parameter(i)%square_mean1(), order_parameter(i)%square_mean2(), &
-          & order_parameter(i)%var1(), order_parameter(i)%var2(), &
-          & order_parameter(i)%cov()
+          & xy2d%nall() * order_parameter(i)%var1(), xy2d%nall() * order_parameter(i)%var2(), &
+          & xy2d%nall() * order_parameter(i)%cov()
   end do
 end program xy2d_gpu_relaxation

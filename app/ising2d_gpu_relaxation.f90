@@ -46,7 +46,7 @@ program ising2d_gpu_relaxation
      write(output_unit, '(*(g0, 1x))') ising2d%nall(), order_parameter(i)%num_sample(), i, &
           & order_parameter(i)%mean1(), order_parameter(i)%mean2(), &
           & order_parameter(i)%square_mean1(), order_parameter(i)%square_mean2(), &
-          & order_parameter(i)%var1(), order_parameter(i)%var2(), &
-          & order_parameter(i)%cov()
+          & ising2d%nall() * order_parameter(i)%var1(), ising2d%nall() * order_parameter(i)%var2(), &
+          & ising2d%nall() * order_parameter(i)%cov()
   end do
 end program ising2d_gpu_relaxation
