@@ -13,7 +13,7 @@ program clock_gpu_relaxation
   integer(int32), parameter :: iseed = 42
   type(clock_gpu) :: clock
   real(real64) :: m, e
-  type(variance_covariance_kahan) :: order_parameter(mcs)
+  type(variance_covariance_kahan), allocatable :: order_parameter(:)
   integer(int32) :: i, sample
   call clock%init(nx, ny, kbt, state, iseed)
   write(error_unit, '(a, i0)') "# size: ", clock%nall()
