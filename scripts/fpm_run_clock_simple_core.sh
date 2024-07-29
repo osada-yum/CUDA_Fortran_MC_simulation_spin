@@ -2,22 +2,22 @@ set -x -u -e
 
 root_dir="./bin/root_$$"
 
-# srcfile="./src/clock_simple_gpu_m.f90"
+# srcfile="./src/clock/clock_simple_gpu_m.f90"
 # progfile="./app/clock_simple_gpu_relaxation.f90"
 # execname="clock_simple_gpu_relaxation"
 # execfile="${root_dir}/bin/${execname}"
 
-# srcfile="./src/clock_table_gpu_m.f90"
+# srcfile="./src/clock/clock_table_gpu_m.f90"
 # progfile="./app/clock_table_gpu_relaxation.f90"
 # execname="clock_table_gpu_relaxation"
 # execfile="${root_dir}/bin/${execname}"
 
-# srcfile="./src/clock_tableall_gpu_m.f90"
+# srcfile="./src/clock/clock_tableall_gpu_m.f90"
 # progfile="./app/clock_tableall_gpu_relaxation.f90"
 # execname="clock_tableall_gpu_relaxation"
 # execfile="${root_dir}/bin/${execname}"
 
-srcfile="./src/clock_dual_lattice_yhalf_tableall_m.f90"
+srcfile="./src/clock/clock_dual_lattice_yhalf_tableall_m.f90"
 progfile="./app/clock_dual_lattice_yhalf_tableall_gpu_relaxation.f90"
 execname="clock_dual_lattice_yhalf_tableall_gpu_relaxation"
 execfile="${root_dir}/bin/${execname}"
