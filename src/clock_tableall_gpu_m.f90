@@ -110,7 +110,7 @@ contains
     integer(int32), value :: parity_lattice
     integer(int32) :: new_state
     integer(int64) :: x, y
-    integer(int64) :: near_x, near_y
+    integer(int64) :: rx, lx, uy, dy
     integer(int32) :: nearest_spins(nd)
     integer(int32) :: i
     x = (blockIdx%x - 1) * blockDim%x + threadIdx%x
@@ -120,21 +120,22 @@ contains
     if (iand(x + y, b'1') /= parity_lattice) return
     !> Calculation about nearest neighbors.
     !> right
-    near_x = x + 1
-    if (near_x > nx) near_x = 1
-    nearest_spins(1) = sixclock(near_x, y)
+    rx = x + 1
+    if (rx > nx) rx = 1
     !> left
-    near_x = x - 1
-    if (near_x < 1) near_x = nx
-    nearest_spins(2) = sixclock(near_x, y)
+    lx = x - 1
+    if (lx < 1) lx = nx
     !> up
-    near_y = y + 1
-    if (near_y > ny) near_y = 1
-    nearest_spins(3) = sixclock(x, near_y)
+    uy = y + 1
+    if (uy > ny) uy = 1
     !> down
-    near_y = y - 1
-    if (near_y < 1) near_y = ny
-    nearest_spins(4) = sixclock(x, near_y)
+    dy = y - 1
+    if (dy < 1) dy = ny
+
+    nearest_spins(1) = sixclock(rx, y)
+    nearest_spins(2) = sixclock(lx, y)
+    nearest_spins(3) = sixclock(x, uy)
+    nearest_spins(4) = sixclock(x, dy)
 
     !> 0 < rnds(1, x, y) <= 1.
     !> 0 < rnds(1, x, y) * (mstate - 1) <= (mstate - -1)
@@ -152,7 +153,7 @@ contains
 
   !> calc_magne: Calculate the magnetism density.
   pure real(real64) function calc_magne() result(res)
-    integer(int64) :: i, y, x
+    integer(int64) :: y, x
     res = 0d0
     !$acc parallel loop private(y, x) reduction(+:res)
     do y = 1, ny
@@ -160,28 +161,21 @@ contains
           res = res + state_to_magne(sixclock(x, y))
        end do
     end do
-
-    ! ! $acc parallel loop private(y, x) reduction(+:res)
-    ! do i = 1, nall
-    !    y = (i - 1) / nx + 1
-    !    x = (i - 1) - (y - 1) * nx + 1 ! == mod(i - 1, nx) + 1
-    !    res = res + state_to_magne(sixclock(x, y))
-    ! end do
     res = res * nall_inv
   end function calc_magne
   !> calc_energy: Calculate the energy density.
   pure real(real64) function calc_energy() result(res)
-    integer(int64) :: i, y, x, rx, uy
+    integer(int64) :: y, x, rx, uy
     res = 0d0
     !$acc parallel loop private(y, x, rx, uy) reduction(+:res)
-    do i = 1, nall
-       y = (i - 1) / nx + 1
-       x = (i - 1) - (y - 1) * nx + 1 ! == mod(i - 1, nx) + 1
-       rx = x + 1
-       if (rx > nx) rx = 1
-       uy = y + 1
-       if (uy > ny) uy = 1
-       res = res + state_center_right_up_to_energy(sixclock(x, y), sixclock(rx, y), sixclock(x, uy))
+    do y = 1, ny
+       do x = 1, nx
+          rx = x + 1
+          if (rx > nx) rx = 1
+          uy = y + 1
+          if (uy > ny) uy = 1
+          res = res + state_center_right_up_to_energy(sixclock(x, y), sixclock(rx, y), sixclock(x, uy))
+       end do
     end do
     res = res * nall_inv
   end function calc_energy
