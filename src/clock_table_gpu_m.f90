@@ -92,7 +92,7 @@ contains
     y = (blockIdx%y - 1) * blockDim%y + threadIdx%y
     if (x > nx) return
     if (y > ny) return
-    if (iand(x + y, b'1') == parity_lattice) return
+    if (iand(x + y, b'1') /= parity_lattice) return
     !> Calculation about nearest neighbors.
     !> right
     near_x = x + 1
