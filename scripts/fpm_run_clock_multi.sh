@@ -1,17 +1,24 @@
 set -x -u -e
 
+## size: 500^2, mcs 10^5, sample 150x2: 42 min
+## size: 500^2, mcs 10^5, sample 150x2 * 12: 9 hour
+## size: 500^2, mcs 10^4, sample 1500x2 * 12: 9. hour
+
+## size: 500^2, mcs 10^5, sample 1800x2 * 8: 72 hour?
+
 FCFLAGS="-O2 -acc -cuda -cudalib=curand"
 # FCFLAGS="${FCFLAGS} -g -Mbounds -Minfo=accel -gpu=debug"
 nx=501
 ny=$((nx - 1))
 mcs=100000
-sample=100
-kbt=0.80
+sample=14400
+kbt=0.88
 state=6
+n_multi=2
 
-progfile="./app/clock_gpu_relaxation.f90"
-execfile="./bin/clock_gpu_relaxation"
-outputfile="data/clock/${state}tate-clock_GPU_x${nx}_y${ny}_mcs${mcs}_sample${sample}_kbt${kbt}_$(date +%Y%m%d_%H%M%S).dat"
+progfile="./app/clock_gpu_multi_relaxation.f90"
+execfile="./bin/clock_gpu_multi_relaxation"
+outputfile="data/clock/${state}state-clock_GPU_x${nx}_y${ny}_mcs${mcs}_sample${sample}x${n_multi}_kbt${kbt}_$(date +%Y%m%d_%H%M%S).dat"
 mkdir -p "data/clock"
 tmpdir="data/tmp"
 mkdir -p "${tmpdir}"
@@ -23,6 +30,7 @@ sed -i -e "s/nx = .*/nx = ${nx}_int64/" \
     -e "s/tot_sample = .*/tot_sample = ${sample}_int32/" \
     -e "s/kbt = .*/kbt = ${kbt}_real64/" \
     -e "s/state = .*/state = ${state}_int32/" \
+    -e "s/n_multi = .*/n_multi = ${n_multi}_int32/" \
     "${progfile}"
 
 fpm --verbose --compiler='nvfortran' --flag="${FCFLAGS}" build clock_gpu_relaxation
@@ -32,7 +40,7 @@ ${execfile} > "${tmpfile}"
 end=$(date +%s)
 cp -v "${tmpfile}" "${outputfile}"
 echo "output >>> '${outputfile}'"
-chmod 600 "${outputfile}"
+chmod 400 "${outputfile}"
 
 hour=$( echo "($end - $start) / 3600" | bc)
 minute=$( echo "(($end - $start) % 3600) / 60" | bc)
@@ -41,5 +49,4 @@ minute=$(printf "%02d" "${minute}")
 second=$(printf "%02d" "${second}")
 elapsed_time="${hour}h ${minute}m ${second}s"
 #     model,»  size,»     sample,»     mcs,»   kbt, time
-echo "${state}state-clock_MET_GPU,  ${nx}x${ny} == $((nx*ny)),»  ${sample},   ${mcs},»   ${kbt}, time ${elapsed_time}, ${outputfile}" | tee -a gpu_clock.log
-
+echo "${state}state-clock_MET_GPU,  ${nx}x${ny} == $((nx*ny)),»  ${sample}x${n_multi} == $((sample*n_multi)),   ${mcs},»   ${kbt}, time ${elapsed_time}, ${outputfile}" | tee -a gpu_clock.log

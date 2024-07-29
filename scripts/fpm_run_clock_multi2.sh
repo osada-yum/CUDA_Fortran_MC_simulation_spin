@@ -1,11 +1,17 @@
 set -x -u -e
 
+## size: 500^2, mcs 10^5, sample 150x2: 42 min
+## size: 500^2, mcs 10^5, sample 150x2 * 12: 9 hour
+## size: 500^2, mcs 10^4, sample 1500x2 * 12: 9. hour
+
+## size: 500^2, mcs 10^5, sample 1800x2 * 8: 72 hour?
+
 FCFLAGS="-O2 -acc -cuda -cudalib=curand"
 # FCFLAGS="${FCFLAGS} -g -Mbounds -Minfo=accel -gpu=debug"
 nx=501
 ny=$((nx - 1))
 mcs=100000
-sample=150
+sample=14400
 kbt=0.80
 state=6
 n_multi=2
@@ -34,7 +40,7 @@ ${execfile} > "${tmpfile}"
 end=$(date +%s)
 cp -v "${tmpfile}" "${outputfile}"
 echo "output >>> '${outputfile}'"
-chmod 600 "${outputfile}"
+chmod 400 "${outputfile}"
 
 hour=$( echo "($end - $start) / 3600" | bc)
 minute=$( echo "(($end - $start) % 3600) / 60" | bc)
