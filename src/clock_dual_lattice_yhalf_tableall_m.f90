@@ -48,7 +48,7 @@ contains
     write(output_unit, '(a)') "#"//version
     write(error_unit, '(a)') "#"//version
   end subroutine print_version
- impure subroutine skip_curand_clock(n_skip)
+  impure subroutine skip_curand_clock(n_skip)
     integer(int64), intent(in) :: n_skip
     if (n_skip == 0_int64) return
     clock_gpu_stat = curandSetGeneratorOffset(rand_gen, n_skip)
