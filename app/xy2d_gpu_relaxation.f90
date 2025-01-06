@@ -3,33 +3,35 @@ program xy2d_gpu_relaxation
   use xy2d_gpu_m
   use variance_covariance_kahan_m
   implicit none
-  integer(int32), parameter :: mcs = 1000_int32
-  integer(int32), parameter :: tot_sample = 1440000_int32
-  integer(int64), parameter :: nx = 1001_int64
-  integer(int64), parameter :: ny = 1000_int64
+  integer(int32), parameter :: mcs = 10000_int32
+  integer(int32), parameter :: tot_sample = 1_int32
+  integer(int64), parameter :: nx = 10001_int64
+  integer(int64), parameter :: ny = nx - 1
   real(real64), parameter :: n_inv_r64 = 1 / real(nx * ny, real64)
-  real(real64), parameter :: kbt = 1.0_real64
-  integer(int32), parameter :: iseed = 42
+  real(real64), parameter :: kbt = 0.895d0
+  integer(int32), parameter :: iseed = 42_int32
+  integer(int64), parameter :: n_skip = 0_int64
   type(xy2d_gpu) :: xy2d
   real(real64) :: m, e
   type(variance_covariance_kahan) :: order_parameter(mcs)
   integer(int32) :: i, sample
-  call xy2d%init(nx, ny, kbt, iseed)
-  write(error_unit, '(a, i0)') "# size: ", xy2d%nall()
-  write(error_unit, '(a, i0, 1x, i0)') "# nx, ny: ", xy2d%nx(), xy2d%ny()
-  write(error_unit, '(a, i0)') "# sample: ", tot_sample
-  write(error_unit, '(a, i0)') "# mcs: ", mcs
-  write(error_unit, '(a, g0)') "# kbt: ", kbt
-  write(error_unit, '(a, i0)' ) "# initial seed: ", iseed
-  write(error_unit, '(a)' ) "# method: Metropolis"
 
-  write(output_unit, '(a, i0)') "# size: ", xy2d%nall()
-  write(output_unit, '(a, i0, 1x, i0)') "# nx, ny: ", xy2d%nx(), xy2d%ny()
-  write(output_unit, '(a, i0)') "# sample: ", tot_sample
-  write(output_unit, '(a, i0)') "# mcs: ", mcs
-  write(output_unit, '(a, g0)') "# kbt: ", kbt
-  write(output_unit, '(a, i0)' ) "# initial seed: ", iseed
-  write(output_unit, '(a)' ) "# method: Metropolis"
+  call xy2d%init(nx, ny, kbt, iseed)
+  call xy2d%skip_curand(2 * n_skip * nx * ny * (mcs + 1) * tot_sample)
+
+  associate(outs => [output_unit, error_unit])
+    do i = 1, size(outs)
+       write(outs(i), '(a, i0)') "# size: ", xy2d%nall()
+       write(outs(i), '(a, i0, 1x, i0)') "# nx, ny: ", xy2d%nx(), xy2d%ny()
+       write(outs(i), '(a, i0)') "# sample: ", tot_sample
+       write(outs(i), '(a, i0)') "# mcs: ", mcs
+       write(outs(i), '(a, g0)') "# kbt: ", kbt
+       write(outs(i), '(a, i0)' ) "# initial seed: ", iseed
+       write(outs(i), '(a, i0)' ) "# n_skip seed: ", n_skip
+       write(outs(i), '(a)' ) "# method: Metropolis"
+    end do
+  end associate
+
   do sample = 1, tot_sample
      write(error_unit, '(*(a, i0))') "Sample: ", sample, " / ", tot_sample
      call xy2d%set_allup_spin()
