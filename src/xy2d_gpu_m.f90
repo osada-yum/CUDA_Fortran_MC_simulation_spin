@@ -29,6 +29,7 @@ module xy2d_gpu_m
      !> updater.
      procedure, pass, private :: update_norishiro => update_norishiro_xy2d_gpu
      procedure, pass :: update => update_xy2d_gpu
+     procedure, pass :: update_over_relaxation => update_over_relaxation_xy2d_gpu
      !> getter.
      procedure, pass :: nx => nx_xy2d_gpu
      procedure, pass :: ny => ny_xy2d_gpu
@@ -171,6 +172,45 @@ contains
     !> randoms(idx) <= exp(- beta * delta_energy)
     spins(idx, :) = candidate(:)
   end subroutine update_sub
+
+  !> update_over_relaxation_xy2d_gpu: Update by over relaxation algorithm.
+  impure subroutine update_over_relaxation_xy2d_gpu(this, n_steps)
+    class(xy2d_gpu), intent(inout) :: this
+    integer(int32), intent(in) :: n_steps
+    integer(int64) :: lb, ub
+    integer(int32) :: i
+    lb = lbound(this%spins_, dim = 1, kind = int64)
+    ub = ubound(this%spins_, dim = 1, kind = int64)
+    do i = 1, n_steps
+       call over_relaxation_sub <<<(this%nall_ + NUM_THREADS - 1) / NUM_THREADS, NUM_THREADS>>> &
+         & (lb, ub, this%nx_, this%nall_, this%spins_, 1)
+       xy2d_gpu_stat = cudaDeviceSynchronize()
+       call this%update_norishiro()
+       xy2d_gpu_stat = cudaDeviceSynchronize()
+       call over_relaxation_sub <<<(this%nall_ + NUM_THREADS - 1) / NUM_THREADS, NUM_THREADS>>> &
+         & (lb, ub, this%nx_, this%nall_, this%spins_, 2)
+       xy2d_gpu_stat = cudaDeviceSynchronize()
+       call this%update_norishiro()
+       xy2d_gpu_stat = cudaDeviceSynchronize()
+    end do
+  end subroutine update_over_relaxation_xy2d_gpu
+  !> over_relaxation_sub: Over relaxation method by GPU.
+  attributes(global) pure subroutine over_relaxation_sub(lb, ub, nx, nall, spins, offset)
+    integer(int64), value :: lb, ub, nx, nall
+    real(real64), intent(inout) :: spins(lb:ub, 1:2)
+    integer(int32), value :: offset
+    real(real64) :: local_field(1:2)
+    real(real64) :: abs_local_field_inv
+    integer(int64) :: idx
+    idx = 2 * ((blockIdx%x - 1) * blockDim%x + threadIdx%x) - 2 + offset
+    if (idx > nall) return
+    !> do idx = offset, this%nall_, 2
+
+    local_field(1:2) = spins(idx - 1, :) + spins(idx + 1, :) + spins(idx + nx, :) + spins(idx - nx, :)
+    abs_local_field_inv = 1 / hypot(local_field(1), local_field(2))
+    local_field(1:2) = local_field(1:2) * abs_local_field_inv
+    spins(idx, 1:2) = (2 * sum(local_field(1:2) * spins(idx, 1:2))) * local_field(1:2) - spins(idx, 1:2)
+  end subroutine over_relaxation_sub
 
   pure integer(int64) function nx_xy2d_gpu(this) result(res)
     class(xy2d_gpu), intent(in) :: this
