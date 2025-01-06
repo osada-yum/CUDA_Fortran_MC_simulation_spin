@@ -16,7 +16,7 @@ program clock_simple_gpu_relaxation
   integer(int32) :: i, sample
 
   call init_sixclock(iseed)
-  call skip_curand_clock(n_skip * nx * ny * (mcs + 1) * tot_sample)
+  call skip_curand_clock(2 * n_skip * nx * ny * (mcs + 1) * tot_sample)
 
   do i = 1, size(outs)
      write(outs(i), '(a, i0)') "# size: ", nall
