@@ -146,10 +146,12 @@ contains
          & (lb, ub, this%nx_, this%nall_, this%spins_, this%beta(), this%randoms_(1:this%nall_), this%candidates_(1:this%nall_), 1)
     xy2d_gpu_stat = cudaDeviceSynchronize()
     call this%update_norishiro()
+    xy2d_gpu_stat = cudaDeviceSynchronize()
     call update_sub <<<(this%nall_ + NUM_THREADS - 1) / NUM_THREADS, NUM_THREADS>>> &
          & (lb, ub, this%nx_, this%nall_, this%spins_, this%beta(), this%randoms_(1:this%nall_), this%candidates_(1:this%nall_), 2)
     xy2d_gpu_stat = cudaDeviceSynchronize()
     call this%update_norishiro()
+    xy2d_gpu_stat = cudaDeviceSynchronize()
   end subroutine update_xy2d_gpu
   attributes(global) pure subroutine update_sub(lb, ub, nx, nall, spins, beta, randoms, candidates, offset)
     integer(int64), value :: lb, ub, nx, nall
