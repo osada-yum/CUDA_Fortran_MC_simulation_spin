@@ -143,12 +143,12 @@ contains
     ub = ubound(this%spins_, dim = 1, kind = int64)
     xy2d_gpu_stat = curandGenerate(this%rand_gen_, this%randoms_(1:this%nall_), this%nall_)
     xy2d_gpu_stat = curandGenerate(this%rand_gen_, this%candidates_(1:this%nall_), this%nall_)
-    call update_sub <<<(this%nall_ + NUM_THREADS - 1) / NUM_THREADS, NUM_THREADS>>> &
+    call update_sub <<<(this%nall_ / 2 + NUM_THREADS - 1) / NUM_THREADS, NUM_THREADS>>> &
          & (lb, ub, this%nx_, this%nall_, this%spins_, this%beta(), this%randoms_(1:this%nall_), this%candidates_(1:this%nall_), 1)
     xy2d_gpu_stat = cudaDeviceSynchronize()
     call this%update_norishiro()
     xy2d_gpu_stat = cudaDeviceSynchronize()
-    call update_sub <<<(this%nall_ + NUM_THREADS - 1) / NUM_THREADS, NUM_THREADS>>> &
+    call update_sub <<<(this%nall_ / 2 + NUM_THREADS - 1) / NUM_THREADS, NUM_THREADS>>> &
          & (lb, ub, this%nx_, this%nall_, this%spins_, this%beta(), this%randoms_(1:this%nall_), this%candidates_(1:this%nall_), 2)
     xy2d_gpu_stat = cudaDeviceSynchronize()
     call this%update_norishiro()
