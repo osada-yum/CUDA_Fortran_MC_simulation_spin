@@ -3,6 +3,7 @@ program xy2d_gpu_relaxation
   use xy2d_gpu_m
   use variance_covariance_kahan_m
   implicit none
+  integer(int32), parameter :: outs(*) = [output_unit, error_unit]
   integer(int32), parameter :: mcs = 10000_int32
   integer(int32), parameter :: tot_sample = 1_int32
   integer(int64), parameter :: nx = 10001_int64
@@ -19,18 +20,16 @@ program xy2d_gpu_relaxation
   call xy2d%init(nx, ny, kbt, iseed)
   call xy2d%skip_curand(2 * n_skip * nx * ny * (mcs + 1) * tot_sample)
 
-  associate(outs => [output_unit, error_unit])
-    do i = 1, size(outs)
-       write(outs(i), '(a, i0)') "# size: ", xy2d%nall()
-       write(outs(i), '(a, i0, 1x, i0)') "# nx, ny: ", xy2d%nx(), xy2d%ny()
-       write(outs(i), '(a, i0)') "# sample: ", tot_sample
-       write(outs(i), '(a, i0)') "# mcs: ", mcs
-       write(outs(i), '(a, g0)') "# kbt: ", kbt
-       write(outs(i), '(a, i0)' ) "# initial seed: ", iseed
-       write(outs(i), '(a, i0)' ) "# n_skip seed: ", n_skip
-       write(outs(i), '(a)' ) "# method: Metropolis"
-    end do
-  end associate
+  do i = 1, size(outs)
+     write(outs(i), '(a, i0)') "# size: ", xy2d%nall()
+     write(outs(i), '(a, i0, 1x, i0)') "# nx, ny: ", xy2d%nx(), xy2d%ny()
+     write(outs(i), '(a, i0)') "# sample: ", tot_sample
+     write(outs(i), '(a, i0)') "# mcs: ", mcs
+     write(outs(i), '(a, g0)') "# kbt: ", kbt
+     write(outs(i), '(a, i0)' ) "# initial seed: ", iseed
+     write(outs(i), '(a, i0)' ) "# n_skip seed: ", n_skip
+     write(outs(i), '(a)' ) "# method: Metropolis"
+  end do
 
   do sample = 1, tot_sample
      write(error_unit, '(*(a, i0))') "Sample: ", sample, " / ", tot_sample
