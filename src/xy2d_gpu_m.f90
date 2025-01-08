@@ -259,17 +259,17 @@ contains
   pure real(real64) function calc_energy_sum_xy2d_gpu(this) result(res)
     class(xy2d_gpu), intent(in) :: this
     integer(int64) :: i
-    res = calc_energy_sum_sub(this%nall_, this%norishiro_end_, this%spins_(1:this%norishiro_end_, 1)) + &
-         & calc_energy_sum_sub(this%nall_, this%norishiro_end_, this%spins_(1:this%norishiro_end_, 2))
+    res = calc_energy_sum_sub(this%nall_, this%norishiro_end_, this%nx_, this%spins_(1:this%norishiro_end_, 1)) + &
+         & calc_energy_sum_sub(this%nall_, this%norishiro_end_, this%nx_, this%spins_(1:this%norishiro_end_, 2))
   contains
-    pure real(real64) function calc_energy_sum_sub(n, norishiro_end, spins) result(res)
-      integer(int64), intent(in) :: n, norishiro_end
+    pure real(real64) function calc_energy_sum_sub(n, norishiro_end, nx, spins) result(res)
+      integer(int64), intent(in) :: n, norishiro_end, nx
       real(real64), intent(in), device :: spins(norishiro_end)
       integer(int64) :: i
       res = 0.0_real64
       !$acc parallel loop present(spins) reduction(+:res)
       do i = 1, n
-         res = res - spins(i) * (spins(i + 1) + spins(i + this%nx_))
+         res = res - spins(i) * (spins(i + 1) + spins(i + nx))
       end do
     end function calc_energy_sum_sub
   end function calc_energy_sum_xy2d_gpu
