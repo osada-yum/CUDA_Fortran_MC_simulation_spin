@@ -69,11 +69,9 @@ contains
   !> set_allup_spin_xy2d_gpu: Set 'ferromagnetic' initial state of XY.
   impure subroutine set_allup_spin_xy2d_gpu(this)
     class(xy2d_gpu), intent(inout) :: this
-    integer(int64) :: lb, ub
     integer(int64) :: i
-    lb = lbound(this%spins_, dim = 2, kind = int64)
-    ub = ubound(this%spins_, dim = 2, kind = int64)
-    call set_allup_spin_sub <<<(this%nall_ + NUM_THREADS - 1)/NUM_THREADS, NUM_THREADS>>>(ub - lb + 1, this%spins_(:, :))
+    call set_allup_spin_sub <<<(this%nall_ + NUM_THREADS - 1)/NUM_THREADS, NUM_THREADS>>>&
+         & (this%norishiro_end_ - this%norishiro_begin_ + 1, this%spins_(:, :))
   end subroutine set_allup_spin_xy2d_gpu
   attributes(global) pure subroutine set_allup_spin_sub(n, spins)
     integer(int64), value :: n
@@ -104,11 +102,8 @@ contains
   !> update_norishiro_xy2d_gpu: Update norishiro by GPU.
   impure subroutine update_norishiro_xy2d_gpu(this)
     class(xy2d_gpu), intent(inout) :: this
-    integer(int64) :: lb, ub
-    lb = lbound(this%spins_, dim = 2, kind = int64)
-    ub = ubound(this%spins_, dim = 2, kind = int64)
     call update_norishiro_sub <<<(this%nx_ + NUM_THREADS - 1)/NUM_THREADS, NUM_THREADS>>> &
-         & (lb, ub, this%nx_, this%nall_, this%spins_)
+         & (this%norishiro_begin_, this%norishiro_end_, this%nx_, this%nall_, this%spins_)
     xy2d_gpu_stat = cudaDeviceSynchronize()
   end subroutine update_norishiro_xy2d_gpu
   attributes(global) pure subroutine update_norishiro_sub(lb, ub, nx, nall, spins)
@@ -138,17 +133,16 @@ contains
   !> update_xy2d_gpu: Update by Metropolis method.
   impure subroutine update_xy2d_gpu(this)
     class(xy2d_gpu), intent(inout) :: this
-    integer(int64) :: lb, ub
-    lb = lbound(this%spins_, dim = 2, kind = int64)
-    ub = ubound(this%spins_, dim = 2, kind = int64)
     xy2d_gpu_stat = curandGenerate(this%rand_gen_, this%randoms_(1:this%nall_), this%nall_)
     xy2d_gpu_stat = curandGenerate(this%rand_gen_, this%candidates_(1:this%nall_), this%nall_)
     call update_sub <<<(this%nall_ + NUM_THREADS - 1) / NUM_THREADS, NUM_THREADS>>> &
-         & (lb, ub, this%nx_, this%nall_, this%spins_, this%beta(), this%randoms_(1:this%nall_), this%candidates_(1:this%nall_), 1)
+         & (this%norishiro_begin_, this%norishiro_end_, this%nx_, this%nall_, &
+         & this%spins_, this%beta(), this%randoms_(1:this%nall_), this%candidates_(1:this%nall_), 1)
     xy2d_gpu_stat = cudaDeviceSynchronize()
     call this%update_norishiro()
     call update_sub <<<(this%nall_ + NUM_THREADS - 1) / NUM_THREADS, NUM_THREADS>>> &
-         & (lb, ub, this%nx_, this%nall_, this%spins_, this%beta(), this%randoms_(1:this%nall_), this%candidates_(1:this%nall_), 2)
+         & (this%norishiro_begin_, this%norishiro_end_, this%nx_, this%nall_, &
+         & this%spins_, this%beta(), this%randoms_(1:this%nall_), this%candidates_(1:this%nall_), 2)
     xy2d_gpu_stat = cudaDeviceSynchronize()
     call this%update_norishiro()
   end subroutine update_xy2d_gpu
@@ -175,17 +169,14 @@ contains
   impure subroutine update_over_relaxation_xy2d_gpu(this, n_steps)
     class(xy2d_gpu), intent(inout) :: this
     integer(int32), intent(in) :: n_steps
-    integer(int64) :: lb, ub
     integer(int32) :: i
-    lb = lbound(this%spins_, dim = 2, kind = int64)
-    ub = ubound(this%spins_, dim = 2, kind = int64)
     do i = 1, n_steps
        call over_relaxation_sub <<<(this%nall_ + NUM_THREADS - 1) / NUM_THREADS, NUM_THREADS>>> &
-         & (lb, ub, this%nx_, this%nall_, this%spins_, 1)
+         & (this%norishiro_begin_, this%norishiro_end_, this%nx_, this%nall_, this%spins_, 1)
        xy2d_gpu_stat = cudaDeviceSynchronize()
        call this%update_norishiro()
        call over_relaxation_sub <<<(this%nall_ + NUM_THREADS - 1) / NUM_THREADS, NUM_THREADS>>> &
-         & (lb, ub, this%nx_, this%nall_, this%spins_, 2)
+         & (this%norishiro_begin_, this%norishiro_end_, this%nx_, this%nall_, this%spins_, 2)
        xy2d_gpu_stat = cudaDeviceSynchronize()
        call this%update_norishiro()
     end do
@@ -240,9 +231,9 @@ contains
     real(real64), intent(in) :: spins(1:2, lb:ub), candidate(1:2)
     real(real64) :: center_diff(1:2), neighbor_summ(1:2)
     integer(int64), value :: idx
-    center_diff = candidate(:) - spins(:, idx)
-    neighbor_summ = spins(:, idx - 1) + spins(:, idx + 1) + spins(:, idx + nx) + spins(:, idx - nx)
-    res = - (center_diff(1) * neighbor_summ(1) + center_diff(2) * neighbor_summ(2))
+    center_diff(:) = candidate(:) - spins(:, idx)
+    neighbor_summ(:) = spins(:, idx - 1) + spins(:, idx + 1) + spins(:, idx + nx) + spins(:, idx - nx)
+    res = - sum(center_diff(1:2) * neighbor_summ(1:2))
   end function calc_delta_energy
   attributes(device) pure real(real64) function calc_local_energy(center, left, right, up, down) result(res)
     real(real64), value :: center, left, right, up, down
@@ -254,22 +245,36 @@ contains
   !> calc_energy_sum_xy2d_gpu: Calculate summation of energy.
   pure real(real64) function calc_energy_sum_xy2d_gpu(this) result(res)
     class(xy2d_gpu), intent(in) :: this
-    integer(int64) :: i
-    res = 0d0
-    !$acc parallel loop reduction(+:res)
-    do i = 1, this%nall_
-       res = res - this%spins_(1, i) * (this%spins_(1, i + 1) + this%spins_(1, i + this%nx_))
-       res = res - this%spins_(2, i) * (this%spins_(2, i + 1) + this%spins_(2, i + this%nx_))
-    end do
+    res = calc_energy_sum_sub(this%nall_, this%norishiro_begin_, this%norishiro_end_, this%nx_, this%spins_(:, :))
+  contains
+    pure real(real64) function calc_energy_sum_sub(n, lb, ub, nx, spins) result(res)
+      integer(int64), intent(in) :: n, lb, ub, nx
+      real(real64), intent(in), device :: spins(1:2, lb:ub)
+      integer(int64) :: i
+      integer(int32) :: j
+      res = 0d0
+      !$acc parallel loop private(i, j) present(spins) reduction(+:res)
+      do i = 1, n
+         do j = 1, 2
+            res = res - spins(j, i) * (spins(j, i + 1) + spins(j, i + nx))
+         end do
+      end do
+    end function calc_energy_sum_sub
   end function calc_energy_sum_xy2d_gpu
   !> calc_magne_sum_xy2d_gpu: Calculate summation of energy.
   pure real(real64) function calc_magne_sum_xy2d_gpu(this) result(res)
     class(xy2d_gpu), intent(in) :: this
-    integer(int64) :: i
-    res = 0d0
-    !$acc parallel loop reduction(+:res)
-    do i = 1, this%nall_
-       res = res + this%spins_(1, i)
-    end do
+    res = calc_magne_sum_sub(this%nall_, this%norishiro_begin_, this%norishiro_end_, this%spins_(:, :))
+  contains
+    pure real(real64) function calc_magne_sum_sub(n, lb, ub, spins) result(res)
+      integer(int64), intent(in) :: n, lb, ub
+      real(real64), intent(in), device :: spins(1:2, lb:ub)
+      integer(int64) :: i
+      res = 0d0
+      !$acc parallel loop reduction(+:res)
+      do i = 1, n
+         res = res + spins(1, i)
+      end do
+    end function calc_magne_sum_sub
   end function calc_magne_sum_xy2d_gpu
 end module xy2d_gpu_flip_spin_index_m
