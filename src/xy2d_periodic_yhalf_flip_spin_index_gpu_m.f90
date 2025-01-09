@@ -136,7 +136,7 @@ contains
     x = (blockIdx%x - 1) * blockDim%x + threadIdx%x
     if (x > nx) return
     ! norishiro bottom, (1:nx, 0) <- (1:nx, ny/2)
-    spins(1, x, 0) = spins(1, x, ny / 2)
+    spins(1, x, 0) = spins(1, x, ny / 2) ! `1:2` でやると何故かエラー `NVFORTRAN-S-0524-Dependency in assignment causes allocation of a temporary which is not supported in DEVICE or GLOBAL subprograms`
     spins(2, x, 0) = spins(2, x, ny / 2)
     ! norishiro top, (1:nx, ny/2 + 1) <- (1:nx, 1)
     spins(1, x, ny / 2 + 1) = spins(1, x, 1)

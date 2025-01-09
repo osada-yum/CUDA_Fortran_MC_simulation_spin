@@ -136,7 +136,7 @@ contains
     x = (blockIdx%x - 1) * blockDim%x + threadIdx%x
     if (x > nx) return
     ! norishiro bottom, (1:nx, 0) <- (1:nx, ny/2)
-    spins(x, 0, 1) = spins(x, ny / 2, 1)
+    spins(x, 0, 1) = spins(x, ny / 2, 1) ! `1:2` でやると何故かエラー `NVFORTRAN-S-0524-Dependency in assignment causes allocation of a temporary which is not supported in DEVICE or GLOBAL subprograms`
     spins(x, 0, 2) = spins(x, ny / 2, 2)
     ! norishiro top, (1:nx, ny/2 + 1) <- (1:nx, 1)
     spins(x, ny / 2 + 1, 1) = spins(x, 1, 1)
@@ -198,7 +198,7 @@ contains
     y = (idx - 1) / nx + 1
     x = idx - (y - 1) * nx
 
-    call sincospi(2 * candidates(x, y), candidate(2), candidate(1))
+    candidate(1:2) = [cos(2 * pi * candidates(x, y)), sin(2 * pi * candidates(x, y))]
     delta_energy = calc_delta_energy(nx, ny, spins_update, spins_around, x, y, candidate, even_or_odd)
     if (randoms(x, y) > exp(- beta * delta_energy)) return
     !> randoms(x, y) <= exp(- beta * delta_energy)
