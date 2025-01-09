@@ -33,6 +33,6 @@ minute=$(printf "%02d" "${minute}")
 second=$(printf "%02d" "${second}")
 elapsed_time="${hour}h ${minute}m ${second}s"
 #     model,»  size,»     sample,»     mcs,»   kbt, time
-echo "xy2d_MET_GPU(${execname}),  ${nx}x${ny} == $((nx*ny)), ${sample}, ${mcs}, ${kbt}, iseed ${iseed}, time ${elapsed_time}, ${outputfile}" | tee -a gpu_xy2d.log
+echo "xy2d_MET_GPU(${execname}),  ${nx}x${ny} == $((nx*ny)), ${sample}, ${mcs}, ${kbt}, iseed ${iseed}, mcs_over_relax${mcs_over_relax}, n_over_relax${n_over_relax}, time ${elapsed_time}, ${outputfile}" | tee -a gpu_xy2d_over_relaxation.log
 
 rm -rf "${root_dir:?}"
