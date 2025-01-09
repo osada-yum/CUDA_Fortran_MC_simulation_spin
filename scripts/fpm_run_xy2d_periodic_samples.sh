@@ -1,5 +1,7 @@
 set -x -u -e
 
+echo "Wrong calculation?"
+
 FCFLAGS="-O3 -use_fast_math -acc -cuda -cudalib=curand"
 # FCFLAGS="${FCFLAGS} -Minfo=accel"
 # FCFLAGS="${FCFLAGS} -g -Mbounds -gpu=debug"

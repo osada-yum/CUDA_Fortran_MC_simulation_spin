@@ -1,5 +1,7 @@
 set -x -u -e
 
+echo "'${srcfile}' has bag?"
+
 output_dir="data/xy2d_periodic"
 outputfile="${output_dir}/xy2d_periodic_GPU_x${nx}_y${ny}_mcs${mcs}_sample${sample}_kbt${kbt}_iseed${iseed}_skip${n_skip}_${execname}_$(date +%Y%m%d_%H%M%S).dat"
 mkdir -p "${output_dir}"
