@@ -37,9 +37,11 @@ program xy2d_periodic_samples_gpu_relaxation
      ! call xy2d%set_random_spin()
      do i = 1, mcs
         call xy2d%update()
-        m = xy2d%calc_magne_sum()
-        e = xy2d%calc_energy_sum()
-        ! write(error_unit, '(*(g0, 1x))') i, m, e
+        call xy2d%calc_magne_sum(m)
+        call xy2d%calc_energy_sum(e)
+
+        ! write(error_unit, '(*(g0, 1x))') i, m(:)
+        ! write(error_unit, '(*(g0, 1x))') i, e(:)
         do j = 1, NUM_THREADS
            call order_parameter(i)%add_data(m(j) * n_inv_r64, e(j) * n_inv_r64)
         end do
