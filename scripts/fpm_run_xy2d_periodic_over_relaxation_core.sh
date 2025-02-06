@@ -18,6 +18,7 @@ sed -i \
     -e "s/n_over_relax = [0-9]*/n_over_relax = ${n_over_relax}/" \
     "${progfile}"
 
+yes |fpm clean
 fpm install "${execname}" --prefix="${root_dir}" --verbose --compiler='nvfortran' --flag="${FCFLAGS}"
 start=$(date +%s)
 ${execfile} > "${tmpfile}"
