@@ -33,6 +33,8 @@ module xy2d_periodic_gpu_m
      procedure, pass :: rotate_summation_magne_toward_xaxis => rotate_summation_magne_toward_xaxis_xy2d_gpu
      procedure, pass :: rotate_summation_magne_and_autocorrelation_toward_xaxis => &
           & rotate_summation_magne_and_autocorrelation_toward_xaxis_xy2d_gpu
+     procedure, pass :: rotate_summation_magne_and_autocorrelation_toward_xaxis_updown_randomly => &
+          & rotate_summation_magne_and_autocorrelation_toward_xaxis_updown_randomly_xy2d_gpu
      procedure, pass :: set_kbt => set_kbt_xy2d_gpu
      procedure, pass :: set_beta => set_beta_xy2d_gpu
      procedure, pass :: set_initial_magne_autocorrelation_state => set_initial_magne_autocorrelation_state_xy2d_gpu
@@ -249,6 +251,33 @@ contains
     call this%update_norishiro()
     xy2d_gpu_stat = cudaDeviceSynchronize()
   end subroutine rotate_summation_magne_and_autocorrelation_toward_xaxis_xy2d_gpu
+
+  !> rotate_summation_magne_and_autocorrelation_toward_xaxis_updown_randomly_xy2d_gpu: Rotate whol spins that satisfied \sum_{i} S_{i}^{(y)} = 0.
+  impure subroutine rotate_summation_magne_and_autocorrelation_toward_xaxis_updown_randomly_xy2d_gpu(this)
+    class(xy2d_gpu), intent(inout) :: this
+    real(real64) :: mx, my
+    real(real64) :: theta
+    mx = this%calc_magne_sum()
+    my = this%calc_magne_y_sum()
+    theta = atan2(my, mx)
+
+    block
+      real(real64) :: r
+      xy2d_gpu_stat = curandGenerate(this%rand_gen_, this%randoms_, 1)
+      r = this%randoms_(1)
+      if (r < 0.5d0) then
+         theta = theta + pi
+      end if
+    end block
+    !> (mx, my) == (cos(theta), sin(theta))
+    !> Rotate whole spin -theta to set my == 0.
+    call rotate_whole_spin_theta_sub <<<(this%nall_ + NUM_THREADS - 1) / NUM_THREADS, NUM_THREADS>>>&
+         & (this%nall_, this%nx_, this%ny_, this%spins_, -theta)
+    call rotate_whole_spin_theta_sub <<<(this%nall_ + NUM_THREADS - 1) / NUM_THREADS, NUM_THREADS>>>&
+         & (this%nall_, this%nx_, this%ny_, this%autocorrelation_start_spins_, -theta)
+    call this%update_norishiro()
+    xy2d_gpu_stat = cudaDeviceSynchronize()
+  end subroutine rotate_summation_magne_and_autocorrelation_toward_xaxis_updown_randomly_xy2d_gpu
 
   attributes(global) pure subroutine rotate_whole_spin_theta_sub(nall, nx, ny, spins, theta)
     integer(int64), value :: nall, nx, ny

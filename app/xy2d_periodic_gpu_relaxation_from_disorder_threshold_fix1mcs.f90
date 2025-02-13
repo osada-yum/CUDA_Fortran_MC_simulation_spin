@@ -6,8 +6,8 @@ program xy2d_periodic_gpu_relaxation_from_disorder_threshold
   implicit none
   integer(int32), parameter :: outs(*) = [output_unit, error_unit]
   integer(int32), parameter :: mcs = 10000_int32
-  integer(int32), parameter :: tot_sample = 50000_int32
-  integer(int64), parameter :: nx = 1000_int64
+  integer(int32), parameter :: tot_sample = 12500_int32
+  integer(int64), parameter :: nx = 2000_int64
   integer(int64), parameter :: ny = nx
   real(real64), parameter :: n_inv_r64 = 1 / real(nx * ny, real64)
   real(real64), parameter :: kbt = 0.890d0
@@ -22,7 +22,7 @@ program xy2d_periodic_gpu_relaxation_from_disorder_threshold
   integer(int32) :: i, sample
 
   call xy2d%init(nx, ny, kbt, iseed)
-  call xy2d%skip_curand(2 * n_skip * nx * ny * (mcs + 1) * tot_sample)
+  call xy2d%skip_curand(4 * n_skip * nx * ny * (mcs + 1) * tot_sample)
 
   do i = 1, size(outs)
      write(outs(i), '(a, i0)') "# size: ", xy2d%nall()

@@ -1,5 +1,6 @@
-program xy2d_periodic_gpu_relaxation_from_disorder
+program xy2d_periodic_gpu_relaxation_from_disorder_fix1mcs
   use, intrinsic :: iso_fortran_env
+  use mpi
   use output_utilities_m
   use xy2d_periodic_gpu_m
   use variance_kahan_m
@@ -32,7 +33,8 @@ program xy2d_periodic_gpu_relaxation_from_disorder
      write(outs(i), '(a, i0)' ) "# initial seed: ", iseed
      write(outs(i), '(a, i0)' ) "# n_skip seed: ", n_skip
      write(outs(i), '(a)' ) "# method: Metropolis"
-     write(outs(i), '(a)' ) "# initial state: disorder, fix0MCS."
+     write(outs(i), '(a)' ) "# initial state: disorder"
+     write(outs(i), '(*(g0, 1x))' ) "# Fix the magnetization at 1MCS as x-aligned"
   end do
 
   do sample = 1, tot_sample
@@ -44,6 +46,7 @@ program xy2d_periodic_gpu_relaxation_from_disorder
 
      do i = 1, mcs
         call xy2d%update()
+        if (i == 1) call xy2d%rotate_summation_magne_and_autocorrelation_toward_xaxis()
         mx = xy2d%calc_magne_sum()
         my = xy2d%calc_magne_y_sum()
         call order_parameter_x(i)%add_data(mx * n_inv_r64)
@@ -59,4 +62,4 @@ program xy2d_periodic_gpu_relaxation_from_disorder
   end do
 
   call output_abs_parameters_from_disorder(xy2d%nall(), mcs, order_parameter_abs, order_parameter_x, order_parameter_y, autocorrelation)
-end program xy2d_periodic_gpu_relaxation_from_disorder
+end program xy2d_periodic_gpu_relaxation_from_disorder_fix1mcs

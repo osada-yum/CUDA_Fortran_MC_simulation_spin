@@ -1,21 +1,18 @@
-program xy2d_periodic_gpu_relaxation_from_disorder_nearmagne_fix1mcs
+program xy2d_periodic_gpu_relaxation_from_disorder_fix1mcs_updown
   use, intrinsic :: iso_fortran_env
   use xy2d_periodic_gpu_m
   use variance_kahan_m
   use variance_covariance_kahan_m
   implicit none
   integer(int32), parameter :: outs(*) = [output_unit, error_unit]
-  integer(int32), parameter :: mcs = 10000_int32
-  integer(int32), parameter :: tot_sample = 12500_int32
-  integer(int64), parameter :: nx = 2000_int64
+  integer(int32), parameter :: mcs = 100_int32
+  integer(int32), parameter :: tot_sample = 50000_int32
+  integer(int64), parameter :: nx = 1000_int64
   integer(int64), parameter :: ny = nx
   real(real64), parameter :: n_inv_r64 = 1 / real(nx * ny, real64)
   real(real64), parameter :: kbt = 0.890d0
   integer(int32), parameter :: iseed = 42_int32
   integer(int64), parameter :: n_skip = 0_int64
-  real(real64), parameter :: near_magne = n_inv_r64
-  real(real64), parameter :: near_magne_diff_parcent = 1d-2
-
   type(xy2d_gpu) :: xy2d
   real(real64) :: m, my, e, ac
   type(variance_covariance_kahan) :: order_parameter(mcs), order_parameter_y(mcs)
@@ -23,7 +20,7 @@ program xy2d_periodic_gpu_relaxation_from_disorder_nearmagne_fix1mcs
   integer(int32) :: i, sample
 
   call xy2d%init(nx, ny, kbt, iseed)
-  call xy2d%skip_curand(4 * n_skip * nx * ny * (mcs + 1) * tot_sample)
+  call xy2d%skip_curand(2 * n_skip * nx * ny * (mcs + 1) * tot_sample)
 
   do i = 1, size(outs)
      write(outs(i), '(a, i0)') "# size: ", xy2d%nall()
@@ -35,13 +32,11 @@ program xy2d_periodic_gpu_relaxation_from_disorder_nearmagne_fix1mcs
      write(outs(i), '(a, i0)' ) "# n_skip seed: ", n_skip
      write(outs(i), '(a)' ) "# method: Metropolis"
      write(outs(i), '(a)' ) "# initial state: disorder"
-     write(outs(i), '(*(g0, 1x))' ) "# Near magne:", near_magne
-     write(outs(i), '(*(g0, 1x))' ) "# Near magne diff parcent:", near_magne_diff_parcent
-     write(outs(i), '(*(g0, 1x))' ) "# Fix the magnetization at 1MCS as x-aligned"
+     write(outs(i), '(*(g0, 1x))' ) "# Fix the magnetization at 1MCS as x-aligned, up-down randomly"
   end do
 
   do sample = 1, tot_sample
-     call xy2d%set_random_near_spin(near_magne, near_magne_diff_parcent)
+     call xy2d%set_random_spin()
      call xy2d%set_initial_magne_autocorrelation_state()
 
      write(error_unit, '(*(g0, 1x))') "#", sample, xy2d%calc_magne_sum() * n_inv_r64
@@ -49,7 +44,7 @@ program xy2d_periodic_gpu_relaxation_from_disorder_nearmagne_fix1mcs
 
      do i = 1, mcs
         call xy2d%update()
-        if (i == 1) call xy2d%rotate_summation_magne_and_autocorrelation_toward_xaxis()
+        if (i == 1) call xy2d%rotate_summation_magne_and_autocorrelation_toward_xaxis_updown_randomly()
         m = xy2d%calc_magne_sum()
         e = xy2d%calc_energy_sum()
         ! write(error_unit, '(*(g0, 1x))') i, m, e
@@ -73,4 +68,4 @@ program xy2d_periodic_gpu_relaxation_from_disorder_nearmagne_fix1mcs
           & xy2d%nall() * autocorrelation(i)%var(), &
           & order_parameter_y(i)%mean1()
   end do
-end program xy2d_periodic_gpu_relaxation_from_disorder_nearmagne_fix1mcs
+end program xy2d_periodic_gpu_relaxation_from_disorder_fix1mcs_updown
