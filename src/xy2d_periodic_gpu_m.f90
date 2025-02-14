@@ -15,7 +15,6 @@ module xy2d_periodic_gpu_m
      private
      real(real64) :: beta_
      integer(int64) :: nx_, ny_, nall_
-     real(real64) :: magne_start_
      real(real64), allocatable, device :: spins_(:, :, :)
      real(real64), allocatable, device :: autocorrelation_start_spins_(:, :, :)
      real(real64), allocatable, device :: randoms_(:, :)
@@ -33,12 +32,11 @@ module xy2d_periodic_gpu_m
      procedure, pass :: rotate_summation_magne_toward_xaxis => rotate_summation_magne_toward_xaxis_xy2d_gpu
      procedure, pass :: rotate_summation_magne_and_autocorrelation_toward_xaxis => &
           & rotate_summation_magne_and_autocorrelation_toward_xaxis_xy2d_gpu
-     procedure, pass :: rotate_summation_magne_and_autocorrelation_toward_xaxis_updown_randomly => &
-          & rotate_summation_magne_and_autocorrelation_toward_xaxis_updown_randomly_xy2d_gpu
+     ! procedure, pass :: rotate_summation_magne_and_autocorrelation_toward_xaxis_updown_randomly => &
+     !      & rotate_summation_magne_and_autocorrelation_toward_xaxis_updown_randomly_xy2d_gpu
      procedure, pass :: set_kbt => set_kbt_xy2d_gpu
      procedure, pass :: set_beta => set_beta_xy2d_gpu
      procedure, pass :: set_initial_magne_autocorrelation_state => set_initial_magne_autocorrelation_state_xy2d_gpu
-     procedure, pass, private :: set_magne_start => set_magne_start_xy2d_gpu
      procedure, pass, private :: set_autocorrelation_start => set_autocorrelation_start_xy2d_gpu
      !> updater.
      procedure, pass, private :: update_norishiro => update_norishiro_xy2d_gpu
@@ -55,7 +53,7 @@ module xy2d_periodic_gpu_m
      procedure, pass :: calc_energy_sum => calc_energy_sum_xy2d_gpu
      procedure, pass :: calc_magne_sum => calc_magne_sum_xy2d_gpu
      procedure, pass :: calc_magne_y_sum => calc_magne_y_sum_xy2d_gpu
-     procedure, pass :: calc_magne_divided_by_initial_magne_sum => calc_magne_divided_by_initial_magne_sum_xy2d_gpu
+     ! procedure, pass :: calc_magne_divided_by_initial_magne_sum => calc_magne_divided_by_initial_magne_sum_xy2d_gpu
      procedure, pass :: calc_autocorrelation_sum => calc_autocorrelation_sum_xy2d_gpu
      procedure, pass :: calc_correlation_sum => calc_correlation_sum_xy2d_gpu
   end type xy2d_gpu
@@ -69,8 +67,8 @@ contains
     this%ny_ = ny
     this%nall_ = nx * ny
 
-    allocate(this%spins_(0 : this%nx_ + 1, 0:this%ny_ + 1, 1:2))
-    allocate(this%autocorrelation_start_spins_(0 : this%nx_ + 1, 0:this%ny_ + 1, 1:2))
+    allocate(this%spins_(0 : this%nx_ + 1, 0 : this%ny_ + 1, 1:2))
+    allocate(this%autocorrelation_start_spins_(0 : this%nx_ + 1, 0 : this%ny_ + 1, 1:2))
     allocate(this%randoms_(1:this%nx_, 1:this%ny_))
     allocate(this%candidates_(1:this%nx_, 1:this%ny_))
     xy2d_gpu_stat = curandCreateGenerator(this%rand_gen_, CURAND_RNG_PSEUDO_XORWOW)
@@ -262,9 +260,11 @@ contains
     theta = atan2(my, mx)
 
     block
+      real(real64), allocatable, device :: r_d(:)
       real(real64) :: r
-      xy2d_gpu_stat = curandGenerate(this%rand_gen_, this%randoms_, 1)
-      r = this%randoms_(1)
+      allocate(r_d(1))
+      xy2d_gpu_stat = curandGenerate(this%rand_gen_, r_d, 1)
+      r = r_d(1)
       if (r < 0.5d0) then
          theta = theta + pi
       end if
@@ -342,14 +342,8 @@ contains
   !> set_initial_magne_autocorrelation_state_xy2d_gpu: Set current spin coordination into `autocorrelation_start_spins_`.
   impure subroutine set_initial_magne_autocorrelation_state_xy2d_gpu(this)
     class(xy2d_gpu), intent(inout) :: this
-    call this%set_magne_start()
     call this%set_autocorrelation_start()
   end subroutine set_initial_magne_autocorrelation_state_xy2d_gpu
-  !> set_magne_start_xy2d_gpu: Set current spin coordination into `autocorrelation_start_spins_`.
-  impure subroutine set_magne_start_xy2d_gpu(this)
-    class(xy2d_gpu), intent(inout) :: this
-    this%magne_start_ = this%calc_magne_sum()
-  end subroutine set_magne_start_xy2d_gpu
   !> set_autocorrelation_start_xy2d_gpu: Set current spin coordination into `autocorrelation_start_spins_`.
   impure subroutine set_autocorrelation_start_xy2d_gpu(this)
     class(xy2d_gpu), intent(inout) :: this
@@ -392,6 +386,16 @@ contains
     !> randoms(x, y) <= exp(- beta * delta_energy)
     spins(x, y, :) = candidate(:)
   end subroutine update_sub
+
+  !> calc_delta_energy: Calculate delta energy if spins_(idx) is flipped.
+  attributes(device) pure real(real64) function calc_delta_energy(nx, ny, spins, x, y, candidate) result(res)
+    integer(int64), value :: nx, ny, x, y
+    real(real64), intent(in) :: spins(0 : nx + 1, 0 : ny + 1, 1:2), candidate(1:2)
+    real(real64) :: center_diff(1:2), neighbor_summ(1:2)
+    center_diff = candidate(:) - spins(x, y, :)
+    neighbor_summ = spins(x + 1, y, :) + spins(x - 1, y, :) + spins(x, y + 1, :) + spins(x, y - 1, :)
+    res = - (center_diff(1) * neighbor_summ(1) + center_diff(2) * neighbor_summ(2))
+  end function calc_delta_energy
 
   !> update_over_relaxation_xy2d_gpu: Update by over relaxation algorithm.
   impure subroutine update_over_relaxation_xy2d_gpu(this, n_steps)
@@ -461,30 +465,37 @@ contains
     allocate(res, source = this%spins_)
   end function spins_xy2d_gpu
 
-  !> calc_delta_energy: Calculate delta energy if spins_(idx) is flipped.
-  attributes(device) pure real(real64) function calc_delta_energy(nx, ny, spins, x, y, candidate) result(res)
-    integer(int64), value :: nx, ny, x, y
-    real(real64), intent(in) :: spins(0 : nx + 1, 0 : ny + 1, 1:2), candidate(1:2)
-    real(real64) :: center_diff(1:2), neighbor_summ(1:2)
-    center_diff = candidate(:) - spins(x, y, :)
-    neighbor_summ = spins(x + 1, y, :) + spins(x - 1, y, :) + spins(x, y + 1, :) + spins(x, y - 1, :)
-    res = - (center_diff(1) * neighbor_summ(1) + center_diff(2) * neighbor_summ(2))
-  end function calc_delta_energy
-  attributes(device) pure real(real64) function calc_local_energy(center, left, right, up, down) result(res)
-    real(real64), value :: center, left, right, up, down
-    res = - (cos(center - left) + &
-         &   cos(center - right) + &
-         &   cos(center - up) + &
-         &   cos(center - down))
-  end function calc_local_energy
-
+!> Calculation functions.
   !> calc_energy_sum_xy2d_gpu: Calculate summation of energy.
-  pure real(real64) function calc_energy_sum_xy2d_gpu(this) result(res)
+  impure real(real64) function calc_energy_sum_xy2d_gpu(this) result(res)
     class(xy2d_gpu), intent(in) :: this
     res = calc_energy_sum_xy2d_gpu_sub(this%nall_, this%nx_, this%ny_, this%spins_)
   end function calc_energy_sum_xy2d_gpu
-  pure real(real64) function calc_energy_sum_xy2d_gpu_sub(nall, nx, ny, spins) result(res)
-    integer(int64), value :: nall, nx, ny
+  !> calc_magne_sum_xy2d_gpu: Calculate summation of magnetization.
+  impure real(real64) function calc_magne_sum_xy2d_gpu(this) result(res)
+    class(xy2d_gpu), intent(in) :: this
+    res = calc_magne_sum_xy2d_gpu_sub(this%nall_, this%nx_, this%ny_, this%spins_)
+  end function calc_magne_sum_xy2d_gpu
+  !> calc_magne_y_sum_xy2d_gpu: Calculate summation of y-components of magnetization.
+  impure real(real64) function calc_magne_y_sum_xy2d_gpu(this) result(res)
+    class(xy2d_gpu), intent(in) :: this
+    res = calc_magne_y_sum_xy2d_gpu_sub(this%nall_, this%nx_, this%ny_, this%spins_)
+  end function calc_magne_y_sum_xy2d_gpu
+  !> calc_autocorrelation_sum_xy2d_gpu: Calculate autocorrelation between `autocorrelation_start_time` and current time.
+  impure real(real64) function calc_autocorrelation_sum_xy2d_gpu(this) result(res)
+    class(xy2d_gpu), intent(in) :: this
+    res = calc_autocorrelation_sum_xy2d_gpu_sub(this%nall_, this%nx_, this%ny_, this%spins_, this%autocorrelation_start_spins_)
+  end function calc_autocorrelation_sum_xy2d_gpu
+  !> calc_correlation_sum_xy2d_gpu: Calculate spin-spin correlation.
+  impure real(real64) function calc_correlation_sum_xy2d_gpu(this) result(res)
+    class(xy2d_gpu), intent(in) :: this
+    res = calc_correlation_sum_xy2d_gpu_sub(this%nall_, this%nx_, this%ny_, this%spins_)
+  end function calc_correlation_sum_xy2d_gpu
+
+!> Implementation of calculation functions.
+  !> calc_energy_sum_xy2d_gpu_sub: Calculate the energy density.
+  impure real(real64) function calc_energy_sum_xy2d_gpu_sub(nall, nx, ny, spins) result(res)
+    integer(int64), intent(in) :: nall, nx, ny
     real(real64), intent(in), device :: spins(0 : nx + 1, 0 : ny + 1, 1:2)
     integer(int64) :: idx, x, y
     res = 0d0
@@ -496,19 +507,9 @@ contains
        res = res - spins(x, y, 2) * (spins(x + 1, y, 2) + spins(x, y + 1, 2))
     end do
   end function calc_energy_sum_xy2d_gpu_sub
-  !> calc_magne_divided_by_initial_magne_sum_xy2d_gpu: Calculate summation of magnetization divided by initial magne.
-  pure real(real64) function calc_magne_divided_by_initial_magne_sum_xy2d_gpu(this) result(res)
-    class(xy2d_gpu), intent(in) :: this
-    res = calc_magne_sum_xy2d_gpu_sub(this%nall_, this%nx_, this%ny_, this%spins_) / this%magne_start_
-  end function calc_magne_divided_by_initial_magne_sum_xy2d_gpu
-  !> calc_magne_sum_xy2d_gpu: Calculate summation of magnetization.
-  pure real(real64) function calc_magne_sum_xy2d_gpu(this) result(res)
-    class(xy2d_gpu), intent(in) :: this
-    res = calc_magne_sum_xy2d_gpu_sub(this%nall_, this%nx_, this%ny_, this%spins_)
-  end function calc_magne_sum_xy2d_gpu
-  !> calc_magne_sum_xy2d_gpu: Calculate summation of x-gradient for magnetization.
-  pure real(real64) function calc_magne_sum_xy2d_gpu_sub(nall, nx, ny, spins) result(res)
-    integer(int64), value :: nall, nx, ny
+  !> calc_magne_sum_xy2d_gpu_sub: Calculate summation of x-gradient for magnetization.
+  impure real(real64) function calc_magne_sum_xy2d_gpu_sub(nall, nx, ny, spins) result(res)
+    integer(int64), intent(in) :: nall, nx, ny
     real(real64), intent(in), device :: spins(0 : nx + 1, 0 : ny + 1, 1:2)
     integer(int64) :: idx, x, y
     res = 0d0
@@ -519,16 +520,9 @@ contains
        res = res + spins(x, y, 1)
     end do
   end function calc_magne_sum_xy2d_gpu_sub
-
-  !> calc_magne_y_sum_xy2d_gpu: Calculate summation of y-components of magnetization.
-  pure real(real64) function calc_magne_y_sum_xy2d_gpu(this) result(res)
-    class(xy2d_gpu), intent(in) :: this
-    res = calc_magne_y_sum_xy2d_gpu_sub(this%nall_, this%nx_, this%ny_, this%spins_)
-  end function calc_magne_y_sum_xy2d_gpu
-
   !> calc_magne_y_sum_xy2d_gpu_sub: Calculate summation of y-gradient for magnetization.
-  pure real(real64) function calc_magne_y_sum_xy2d_gpu_sub(nall, nx, ny, spins) result(res)
-    integer(int64), value :: nall, nx, ny
+  impure real(real64) function calc_magne_y_sum_xy2d_gpu_sub(nall, nx, ny, spins) result(res)
+    integer(int64), intent(in) :: nall, nx, ny
     real(real64), intent(in), device :: spins(0 : nx + 1, 0 : ny + 1, 1:2)
     integer(int64) :: idx, x, y
     res = 0d0
@@ -539,15 +533,9 @@ contains
        res = res + spins(x, y, 2)
     end do
   end function calc_magne_y_sum_xy2d_gpu_sub
-
-  !> calc_autocorrelation_sum_xy2d_gpu: Calculate autocorrelation between `autocorrelation_start_time` and current time.
-  pure real(real64) function calc_autocorrelation_sum_xy2d_gpu(this) result(res)
-    class(xy2d_gpu), intent(in) :: this
-    res = calc_autocorrelation_sum_xy2d_gpu_sub(this%nall_, this%nx_, this%ny_, this%spins_, this%autocorrelation_start_spins_)
-  end function calc_autocorrelation_sum_xy2d_gpu
   !> calc_autocorrelation_sum_xy2d_gpu_sub: sub function for `calc_correlation_sum_xy2d_gpu`.
-  pure real(real64) function calc_autocorrelation_sum_xy2d_gpu_sub(nall, nx, ny, spins, autocorrelation_start_spins) result(res)
-    integer(int64), value :: nall, nx, ny
+  impure real(real64) function calc_autocorrelation_sum_xy2d_gpu_sub(nall, nx, ny, spins, autocorrelation_start_spins) result(res)
+    integer(int64), intent(in) :: nall, nx, ny
     real(real64), intent(in), device :: spins(0 : nx + 1, 0 : ny + 1, 1:2)
     real(real64), intent(in), device :: autocorrelation_start_spins(0 : nx + 1, 0 : ny + 1, 1:2)
     integer(int64) :: idx, x, y
@@ -560,15 +548,9 @@ contains
        res = res + spins(x, y, 2) * autocorrelation_start_spins(x, y, 2)
     end do
   end function calc_autocorrelation_sum_xy2d_gpu_sub
-
-  !> calc_correlation_sum_xy2d_gpu: Calculate spin-spin correlation.
-  pure real(real64) function calc_correlation_sum_xy2d_gpu(this) result(res)
-    class(xy2d_gpu), intent(in) :: this
-    res = calc_correlation_sum_xy2d_gpu_sub(this%nall_, this%nx_, this%ny_, this%spins_)
-  end function calc_correlation_sum_xy2d_gpu
   !> calc_correlation_sum_xy2d_gpu_sub: sub function for `calc_correlation_sum_xy2d_gpu`.
-  pure real(real64) function calc_correlation_sum_xy2d_gpu_sub(nall, nx, ny, spins) result(res)
-    integer(int64), value :: nall, nx, ny
+  impure real(real64) function calc_correlation_sum_xy2d_gpu_sub(nall, nx, ny, spins) result(res)
+    integer(int64), intent(in) :: nall, nx, ny
     real(real64), intent(in), device :: spins(0 : nx + 1, 0 : ny + 1, 1:2)
     integer(int64) :: idx, x, y, next_x, next_y
     res = 0d0

@@ -1,5 +1,6 @@
 program xy2d_periodic_gpu_relaxation_from_disorder_fix1mcs
   use, intrinsic :: iso_fortran_env
+  use output_utilities_m
   use xy2d_periodic_gpu_m
   use variance_kahan_m
   use variance_covariance_kahan_m
@@ -14,9 +15,9 @@ program xy2d_periodic_gpu_relaxation_from_disorder_fix1mcs
   integer(int32), parameter :: iseed = 42_int32
   integer(int64), parameter :: n_skip = 0_int64
   type(xy2d_gpu) :: xy2d
-  real(real64) :: m, my, e, ac
-  type(variance_covariance_kahan) :: order_parameter(mcs), order_parameter_y(mcs)
-  type(variance_kahan) :: autocorrelation(mcs)
+  real(real64) :: mx, my, mabs, e, ac
+  type(variance_covariance_kahan) :: order_parameter_abs(mcs)
+  type(variance_kahan) :: order_parameter_x(mcs), order_parameter_y(mcs), autocorrelation(mcs)
   integer(int32) :: i, sample
 
   call xy2d%init(nx, ny, kbt, iseed)
@@ -45,27 +46,19 @@ program xy2d_periodic_gpu_relaxation_from_disorder_fix1mcs
      do i = 1, mcs
         call xy2d%update()
         if (i == 1) call xy2d%rotate_summation_magne_and_autocorrelation_toward_xaxis()
-        m = xy2d%calc_magne_sum()
-        e = xy2d%calc_energy_sum()
-        ! write(error_unit, '(*(g0, 1x))') i, m, e
-        call order_parameter(i)%add_data(m * n_inv_r64, e * n_inv_r64)
+        mx = xy2d%calc_magne_sum()
         my = xy2d%calc_magne_y_sum()
-        call order_parameter_y(i)%add_data(my * n_inv_r64, e * n_inv_r64)
+        call order_parameter_x(i)%add_data(mx * n_inv_r64)
+        call order_parameter_y(i)%add_data(my * n_inv_r64)
+        e = xy2d%calc_energy_sum()
+        ! write(error_unit, '(*(g0, 1x))') i, mx * n_inv_r64, my * n_inv_r64, e * n_inv_r64
+        mabs = hypot(mx * n_inv_r64, my * n_inv_r64)
+        call order_parameter_abs(i)%add_data(mabs, e * n_inv_r64)
         ac = xy2d%calc_autocorrelation_sum()
         call autocorrelation(i)%add_data(ac * n_inv_r64)
-        ! write(error_unit, *) sample, i, m * n_inv_r64
+        ! write(error_unit, *) i, ac * n_inv_r64
      end do
   end do
-  write(output_unit, '(*(g0, 1x))') "# N, Nsample, time, <m>, <e>, <m^2>, <e^2>, N*Var[m], N*Var[e], N*Cov[m,e], <A>, <A^2>, N*Var[A], <m_y>"
-  do i = 1, mcs
-     write(output_unit, '(*(g0, 1x))') xy2d%nall(), order_parameter(i)%num_sample(), i, &
-          & order_parameter(i)%mean1(), order_parameter(i)%mean2(), &
-          & order_parameter(i)%square_mean1(), order_parameter(i)%square_mean2(), &
-          & xy2d%nall() * order_parameter(i)%var1(), xy2d%nall() * order_parameter(i)%var2(), &
-          & xy2d%nall() * order_parameter(i)%cov(), &
-          & autocorrelation(i)%mean(), &
-          & autocorrelation(i)%square_mean(), &
-          & xy2d%nall() * autocorrelation(i)%var(), &
-          & order_parameter_y(i)%mean1()
-  end do
+
+  call output_abs_parameters_from_disorder(xy2d%nall(), mcs, order_parameter_abs, order_parameter_x, order_parameter_y, autocorrelation)
 end program xy2d_periodic_gpu_relaxation_from_disorder_fix1mcs
