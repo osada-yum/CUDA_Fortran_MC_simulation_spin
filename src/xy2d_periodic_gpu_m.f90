@@ -554,7 +554,7 @@ contains
     real(real64), intent(in), device :: spins(0 : nx + 1, 0 : ny + 1, 1:2)
     integer(int64) :: idx, x, y, next_x, next_y
     res = 0d0
-    !$acc parallel loop private(x, y, nx, ny) present(spins(:, :, 1:2)) reduction(+:res)
+    !$acc parallel loop private(x, y, next_x, next_y) present(spins(:, :, 1:2)) reduction(+:res)
     do idx = 1, nall
        y = (idx - 1) / nx + 1
        x = idx - (y - 1) * nx
