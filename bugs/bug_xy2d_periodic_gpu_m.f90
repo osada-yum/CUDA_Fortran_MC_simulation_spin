@@ -41,7 +41,7 @@ contains
     this%ny_ = ny
     this%nall_ = nx * ny
 
-    allocate(this%spins_(0 : this%nx_ + 1, 0 : this%ny_ + 1, 1:2))
+    allocate(this%spins_(1 : this%nx_ + 2, 1 : this%ny_ + 2, 1:2))
     ! allocate(this%autocorrelation_start_spins_(0 : this%nx_ + 1, 0 : this%ny_ + 1, 1:2))
     ! allocate(this%randoms_(1:this%nx_, 1:this%ny_))
     ! allocate(this%candidates_(1:this%nx_, 1:this%ny_))
@@ -93,7 +93,7 @@ contains
   !> calc_energy_sum_xy2d_gpu_sub: Calculate the energy density.
   impure real(real64) function calc_energy_sum_xy2d_gpu_sub(nall, nx, ny, spins) result(res)
     integer(int64), intent(in) :: nall, nx, ny
-    real(real64), intent(in), device :: spins(0 : nx + 1, 0 : ny + 1, 1:2)
+    real(real64), intent(in), device :: spins(1 : nx + 2, 1 : ny + 2, 1:2)
     integer(int64) :: idx, x, y
     res = 0d0
     !$acc parallel loop private(x, y) present(spins) reduction(+:res)
@@ -108,7 +108,7 @@ contains
   !> calc_magne_sum_xy2d_gpu_sub: Calculate summation of x-gradient for magnetization.
   impure real(real64) function calc_magne_sum_xy2d_gpu_sub(nall, nx, ny, spins) result(res)
     integer(int64), intent(in) :: nall, nx, ny
-    real(real64), intent(in), device :: spins(0 : nx + 1, 0 : ny + 1, 1:2)
+    real(real64), intent(in), device :: spins(1 : nx + 2, 1 : ny + 2, 1:2)
     integer(int64) :: idx, x, y
     res = 0d0
     !$acc parallel loop private(x, y) present(spins) reduction(+:res)
@@ -121,10 +121,10 @@ contains
   !> calc_correlation_sum_xy2d_gpu_sub: sub function for `calc_correlation_sum_xy2d_gpu`.
   impure real(real64) function calc_correlation_sum_xy2d_gpu_sub(nall, nx, ny, spins) result(res)
     integer(int64), intent(in) :: nall, nx, ny
-    real(real64), intent(in), device :: spins(0 : nx + 1, 0 : ny + 1, 1:2)
+    real(real64), intent(in), device :: spins(1 : nx + 2, 1 : ny + 2, 1:2)
     integer(int64) :: idx, x, y, next_x, next_y
     res = 0d0
-    !$acc parallel loop private(x, y, nx, ny) present(spins) reduction(+:res)
+    !$acc parallel loop private(x, y, next_x, next_y) present(spins) reduction(+:res)
     do idx = 1, nall
        y = (idx - 1) / nx + 1
        x = idx - (y - 1) * nx
