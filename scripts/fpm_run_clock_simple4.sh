@@ -12,5 +12,5 @@ n_skip=0
 mstate=6
 
 script_dir="scripts"
-kind="tableall"
+kind="dual_lattice_yhalf_tableall"
 source "${script_dir}/fpm_run_clock_simple_core.sh"

@@ -2,13 +2,15 @@ set -x -u -e
 
 FCFLAGS="-O2 -acc -cuda -cudalib=curand"
 # FCFLAGS="${FCFLAGS} -g -Mbounds -Minfo=accel -gpu=debug"
-nx=1000
+nx=2000
 ny=${nx}
-mcs=100000
-sample=250
-kbt=0.91
+mcs=10000
+sample=1000
+kbt=0.450
 iseed=42
 n_skip=0
+mstate=6
 
 script_dir="scripts"
+kind="simple"
 source "${script_dir}/fpm_run_clock_simple_core.sh"
