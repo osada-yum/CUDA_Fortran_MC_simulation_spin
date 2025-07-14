@@ -17,7 +17,7 @@ sed -i \
     -e "s/finite_magne = .*/finite_magne = ${finite_magne}/" \
     "${progfile}"
 
-yes |fpm clean
+fpm clean --skip
 fpm install "${execname}" --prefix="${root_dir}" --verbose --compiler='nvfortran' --flag="${FCFLAGS}"
 start=$(date +%s)
 ${execfile} > "${tmpfile}"

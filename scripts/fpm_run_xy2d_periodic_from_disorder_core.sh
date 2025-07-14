@@ -7,6 +7,20 @@ tmpdir="data/tmp"
 mkdir -p "${tmpdir}"
 tmpfile="$(mktemp --tmpdir=${tmpdir})"
 
+lock_file="fpm_run.lock"
+cnts=0
+while [ -f "${lock_file}" ]; do
+    sleep 30
+    cnts=$((cnts+1))
+    if echo "${cnts} > 100" | bc ; then
+        break
+    fi
+done
+touch "${lock_file}"
+trap "{
+     rm -f ${lock_file};
+}" SIGINT SIGUSR1 SIGQUIT SIGKILL SIGSEGV
+
 sed -i \
     -e "s/nx = [0-9]*_int64/nx = ${nx}_int64/" \
     -e "s/mcs = [0-9]*_int32/mcs = ${mcs}_int32/" \
@@ -16,8 +30,16 @@ sed -i \
     -e "s/iseed = [0-9]*/iseed = ${iseed}/" \
     "${progfile}"
 
-yes |fpm clean
+fpm clean --skip
 fpm install "${execname}" --prefix="${root_dir}" --verbose --compiler='nvfortran' --flag="${FCFLAGS}"
+
+kill -10 $$ # SIGUSR1
+trap SIGINT
+trap SIGUSR1
+trap SIGQUIT
+trap SIGKILL
+trap SIGSEGV
+
 start=$(date +%s)
 ${execfile} > "${tmpfile}"
 end=$(date +%s)

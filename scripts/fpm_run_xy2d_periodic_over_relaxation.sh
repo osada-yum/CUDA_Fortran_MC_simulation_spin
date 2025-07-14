@@ -3,11 +3,11 @@ set -x -u -e
 FCFLAGS="-O3 -use_fast_math -acc -cuda -cudalib=curand"
 # FCFLAGS="${FCFLAGS} -Minfo=accel"
 # FCFLAGS="${FCFLAGS} -g -Mbounds -gpu=debug"
-nx=10000
+nx=4000
 ny=${nx}
 mcs=10000
-sample=500
-kbt=0.895
+sample=3125
+kbt=0.890
 iseed=42
 n_skip=0
 
