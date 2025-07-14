@@ -1,14 +1,7 @@
 set -x -u -e
 
-root_dir="./bin/root_$$"
-
-srcfile="./src/xy2d_gpu_m.f90"
-progfile="./app/xy2d_gpu_relaxation.f90"
-execname="xy2d_gpu_relaxation"
-execfile="${root_dir}/bin/${execname}"
-
-output_dir="data/xy2d_periodic"
-outputfile="${output_dir}/xy2d_periodic_GPU_x${nx}_y${ny}_mcs${mcs}_sample${sample}_kbt${kbt}_iseed${iseed}_skip${n_skip}_${execname}_$(date +%Y%m%d_%H%M%S).dat"
+output_dir="data/xy2d"
+outputfile="${output_dir}/xy2d_GPU_x${nx}_y${ny}_mcs${mcs}_sample${sample}_kbt${kbt}_iseed${iseed}_skip${n_skip}_${execname}_$(date +%Y%m%d_%H%M%S).dat"
 mkdir -p "${output_dir}"
 tmpdir="data/tmp"
 mkdir -p "${tmpdir}"

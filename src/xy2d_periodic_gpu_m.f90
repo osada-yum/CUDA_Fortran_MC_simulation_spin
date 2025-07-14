@@ -107,7 +107,6 @@ contains
     xy2d_gpu_stat = curandGenerate(this%rand_gen_, this%randoms_, this%nall_)
     call set_random_spin_sub <<<(this%nall_ + NUM_THREADS - 1) / NUM_THREADS, NUM_THREADS>>>&
          & (this%nall_, this%nx_, this%ny_, this%spins_, this%randoms_)
-    call this%rotate_summation_magne_toward_xaxis()
   end subroutine set_random_spin_xy2d_gpu
 
   attributes(global) pure subroutine set_random_spin_sub(nall, nx, ny, spins, randoms)

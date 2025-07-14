@@ -16,8 +16,8 @@ program xy2d_periodic_gpu_relaxation_from_disorder
   integer(int64), parameter :: n_skip = 0_int64
   type(xy2d_gpu) :: xy2d
   real(real64) :: mx, my, mabs, e, ac
-  type(variance_covariance_kahan) :: order_parameter_abs(mcs)
-  type(variance_kahan) :: order_parameter_x(mcs), order_parameter_y(mcs), autocorrelation(mcs)
+  type(variance_covariance_kahan) :: order_parameter_xy(mcs), order_parameter_abs(mcs)
+  type(variance_kahan) :: autocorrelation(mcs)
   integer(int32) :: i, sample
 
   call xy2d%init(nx, ny, kbt, iseed)
@@ -30,13 +30,14 @@ program xy2d_periodic_gpu_relaxation_from_disorder
      write(outs(i), '(a, i0)') "# mcs: ", mcs
      write(outs(i), '(a, g0)') "# kbt: ", kbt
      write(outs(i), '(a, i0)' ) "# initial seed: ", iseed
-     write(outs(i), '(a, i0)' ) "# n_skip seed: ", n_skip
+     write(outs(i), '(a, i0)' ) "# n_skip: ", n_skip
      write(outs(i), '(a)' ) "# method: Metropolis"
      write(outs(i), '(a)' ) "# initial state: disorder, fix0MCS."
   end do
 
   do sample = 1, tot_sample
      call xy2d%set_random_spin()
+     call xy2d%rotate_summation_magne_toward_xaxis()
      call xy2d%set_initial_magne_autocorrelation_state()
 
      write(error_unit, '(*(g0, 1x))') "#", sample, xy2d%calc_magne_sum() * n_inv_r64
@@ -44,19 +45,18 @@ program xy2d_periodic_gpu_relaxation_from_disorder
 
      do i = 1, mcs
         call xy2d%update()
-        mx = xy2d%calc_magne_sum()
-        my = xy2d%calc_magne_y_sum()
-        call order_parameter_x(i)%add_data(mx * n_inv_r64)
-        call order_parameter_y(i)%add_data(my * n_inv_r64)
-        e = xy2d%calc_energy_sum()
+        mx = xy2d%calc_magne_sum() * n_inv_r64
+        my = xy2d%calc_magne_y_sum() * n_inv_r64
+        call order_parameter_xy(i)%add_data(mx, my)
+        e = xy2d%calc_energy_sum() * n_inv_r64
         ! write(error_unit, '(*(g0, 1x))') i, mx, e
-        mabs = hypot(mx * n_inv_r64, my * n_inv_r64)
-        call order_parameter_abs(i)%add_data(mabs, e * n_inv_r64)
-        ac = xy2d%calc_autocorrelation_sum()
-        call autocorrelation(i)%add_data(ac * n_inv_r64)
+        mabs = hypot(mx, my)
+        call order_parameter_abs(i)%add_data(mabs, e)
+        ac = xy2d%calc_autocorrelation_sum() * n_inv_r64
+        call autocorrelation(i)%add_data(ac)
         ! write(error_unit, *) sample, i, mx * n_inv_r64
      end do
   end do
 
-  call output_abs_parameters_from_disorder(xy2d%nall(), mcs, order_parameter_abs, order_parameter_x, order_parameter_y, autocorrelation)
+  call output_abs_parameters_from_disorder(xy2d%nall(), mcs, order_parameter_abs, order_parameter_xy, autocorrelation)
 end program xy2d_periodic_gpu_relaxation_from_disorder

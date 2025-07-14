@@ -239,6 +239,11 @@ contains
     abs_local_field_inv = 1 / hypot(local_field(1), local_field(2))
     local_field(1:2) = local_field(1:2) * abs_local_field_inv
     spins_update(x, y, 1:2) = (2 * sum(local_field(1:2) * spins_update(x, y, 1:2))) * local_field(1:2) - spins_update(x, y, 1:2)
+    block
+      real(real64) :: rabs
+      rabs = hypot(spins_update(x, y, 1), spins_update(x, y, 2))
+      spins_update(x, y, 1:2) = spins_update(x, y, 1:2) / rabs
+    end block
   end subroutine over_relaxation_sub
 
   pure integer(int64) function nx_xy2d_gpu(this) result(res)
